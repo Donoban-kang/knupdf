@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- KnuPdf app icon for 16-32 px: the same mark with heavier proportions. -->
+  <rect x="1" y="1" width="30" height="30" rx="7" fill="#0A4A9F"/>
+  <path d="M8 5 H19 L25 11 V27 H8 Z" fill="#FFFFFF"/>
+  <path d="M19 5 V11 H25 Z" fill="#A9C6EE"/>
+  <path d="M10.5 13 H14 V17.4 L18 13 H22.2 L17.4 18.2 L22.4 24.5 H18.2 L14 19.4 V24.5 H10.5 Z" fill="#0B1F3F"/>
+</svg>

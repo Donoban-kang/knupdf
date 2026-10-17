@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- KnuPdf PDF document icon: a white page with a blue PDF band and the K badge. -->
+  <path d="M52 16 H164 L212 64 V240 H52 Z" fill="#FFFFFF" stroke="#C3CFDF" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M164 16 V64 H212 Z" fill="#DCE7F6" stroke="#C3CFDF" stroke-width="8" stroke-linejoin="round"/>
+  <rect x="24" y="140" width="164" height="72" rx="14" fill="#0A4A9F"/>
+  <text x="106" y="194" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="50" fill="#FFFFFF">PDF</text>
+  <path d="M82 54 H104 V84 L130 54 H156 L124 90 L158 128 H132 L104 96 V128 H82 Z" fill="#0B1F3F"/>
+</svg>

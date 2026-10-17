@@ -1,0 +1,6 @@
+KnuPdf icons (knupdf.svg, knupdf-small.svg, knupdf-document.svg and every file rendered from them
+in this directory: *.png, *.ico).
+
+Original artwork drawn for KnuPdf from simple geometric shapes (no third-party material). The
+colours follow the KNUPDF screen design (Kangwon blue #0A4A9F, navy #0B1F3F). Licensed like the
+rest of KnuPdf, under either of the MIT licence or the Apache License 2.0, at your option.

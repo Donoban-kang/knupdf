@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- KnuPdf app icon: a page with a folded corner and a K monogram on Kangwon blue. -->
+  <rect x="12" y="12" width="232" height="232" rx="54" fill="#0A4A9F"/>
+  <path d="M74 44 H154 L194 84 V212 H74 Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M154 44 V84 H194 Z" fill="#A9C6EE" stroke="#A9C6EE" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M98 104 H124 V140 L156 104 H188 L148 146 L190 194 H158 L124 154 V194 H98 Z" fill="#0B1F3F"/>
+</svg>
