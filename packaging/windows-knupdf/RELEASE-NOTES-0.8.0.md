@@ -1,5 +1,11 @@
 KnuPdf 첫 시험판입니다. [PdfCraft](https://github.com/storytold/pdfcraft)(MIT 또는 Apache-2.0)를 바탕으로 화면 전체를 한국어로 바꾸고, 한글 글꼴과 전용 아이콘을 넣었습니다.
 
+## 주요 기능
+
+- 화면 전체 한국어, 한글 글꼴 내장
+- PDF 읽기, 페이지 정리(회전·삭제·추출·분할·합치기), 주석, 양식, 채우기 및 서명, 디지털 서명, 암호 보호, 압축
+- **한국 개인정보 가리기**: PDF 가리기 → 텍스트 찾아 가리기 → 패턴 → "한국 개인정보 전체"로 주민·외국인등록번호, 전화번호, 사업자등록번호, 계좌번호, 여권번호, 운전면허번호, 이메일, 신용카드 번호를 한 번에 찾아 영구 삭제
+
 ## 내려받기 (Windows 10/11, 64비트)
 
 | 파일 | 용도 |
@@ -20,8 +26,8 @@ KnuPdf 첫 시험판입니다. [PdfCraft](https://github.com/storytold/pdfcraft)
 ## 파일 확인값 (SHA-256)
 
 ```
-c39dfee31e014fc4b7f6dd67f829030f35b16e14c61df938290a7b0b9a1f3453  KnuPdf-0.8.0-windows-x64-setup.exe
-883d775b1b51e407032110c2c1b8255cbfe830f617c5012b82da649360c322f9  KnuPdf-0.8.0-windows-x64-portable.zip
+42a3efbfab43e047ca11f86a37453060c23affddeed29adbbe3a1a0d455df621  KnuPdf-0.8.0-windows-x64-setup.exe
+1fcfc401367c03274453f4b728d312de0c85f6b4f07884977cbed54641812005  KnuPdf-0.8.0-windows-x64-portable.zip
 ```
 
 ## 라이선스
