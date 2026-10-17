@@ -3,7 +3,7 @@
 다른 PC에서, 또는 다른 사람·AI 도구가 이어서 작업할 때 처음 읽는 문서입니다.
 무엇을 왜 만드는지는 [KnuPdf-PRD.md](KnuPdf-PRD.md)에 있습니다.
 
-- 마지막 갱신: 2026-10-17
+- 마지막 갱신: 2026-10-17 (한국 개인정보 가리기 추가)
 - 담당: 강돈호
 - 저장소: https://github.com/Donoban-kang/knupdf (`main`)
 - 현재 버전: 0.8.0 (원본 PdfCraft 버전을 그대로 따름)
@@ -17,6 +17,7 @@
 | Windows 설치 파일·휴대용 zip | 빌드 완료. **실제 Windows에서는 아직 미시험**(Wine에서 실행·창 제목·정보 창만 확인) |
 | GitHub Releases | **미등록**. 아래 6절 순서대로 직접 올려야 함 |
 | 웹판 | claude.ai Artifact로 비공개 게시: https://claude.ai/artifact/CzyCoaMnWXithtxtsuF2hq |
+| 한국 개인정보 가리기 | 완료. PDF 가리기 → 텍스트 찾아 가리기 → 패턴 → "한국 개인정보 전체"(기본값) 또는 항목별 |
 | 다음 할 일 | 9절 |
 
 ## 2. 저장소 구조와 기록
@@ -35,6 +36,7 @@
 | `crates/ui-egui/src/lib.rs` | 기본 언어 `ko`, 창 제목 "… — KnuPdf", `notify_error` 번역 |
 | `crates/ui-egui/src/theme.rs` | 한글 글꼴(KnupdfHangul) 등록 |
 | `crates/ui-egui/src/home.rs`, `chrome.rs`, `widgets.rs`, `dialogs.rs` | ArtCraft 로고·Discord 제거, 정보 창(버전, 만든이) |
+| `crates/redact/src/patterns.rs` | 한국 개인정보 패턴(`KrAll`, `KrResident`, `KrPhone`, `KrBusiness`, `KrAccount`, `KrPassport`, `KrDriver`)과 테스트. 자동화 도구 `redact_mark`의 `pattern` 값은 `kr-all`, `kr-resident` … |
 | `crates/engine/src/commands.rs`, `links.rs` | 도움말 메뉴에서 Discord·ArtCraft 링크 숨김, "KnuPdf 정보" |
 | `assets/fonts/KnupdfHangul.ttf`, `OFL-KnupdfHangul.txt` | 나눔고딕 한글 부분, 이름 변경(OFL 조건) |
 | `assets/app-icon-knupdf/` | 아이콘 원본(SVG)과 PNG·ICO, 라이선스 |
@@ -142,9 +144,9 @@ git commit -am "Sync PdfCraft upstream to <새 원본 커밋>"
 
 1. **실제 Windows 점검**(PRD F-01). 문제가 있으면 Issues에 기록합니다.
 2. **GitHub Releases 등록**(6절).
-3. **한국 개인정보 패턴 가리기**(F-02).
-   - 주민등록번호, 사업자등록번호, 계좌번호, 휴대전화 등.
-   - 관련 코드: `crates/redact`, `crates/ui-egui/src/redact_ui.rs`(지금은 미국식 SSN·전화·카드·이메일·날짜 패턴).
+3. **한국 개인정보 가리기 보완**(F-02 후속): 실제 기관 문서로 오탐·누락 점검, 필요한 패턴(건강보험증 번호 등) 추가.
+   - 코드: `crates/redact/src/patterns.rs`. 테스트: `cargo test -p pdfcraft-redact --lib patterns`
+   - 명령줄로 확인: `pdfcraft-cli run --script steps.json` (doc_open → redact_mark `pattern: kr-all` → redact_apply → doc_save)
 4. **CI 정리**: 원본 GitHub Actions 중 KnuPdf에 필요 없는 것(macOS·FreeBSD·서명 등)을 끄고, Windows 설치 파일을 자동으로 만드는 작업을 추가합니다.
 5. **직인 찍기**(F-03), **한국어 날짜 형식**(F-04).
 6. **화면 개편**(F-06): 강원대 블루 리본형 UI 시안을 기준으로 합니다.

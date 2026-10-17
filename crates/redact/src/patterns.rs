@@ -1,11 +1,21 @@
 //! Search & Redact patterns (Acrobat's Find Text ▸ Patterns): phone numbers, email addresses,
-//! credit card numbers, US Social Security numbers and dates. Each matcher works on a page's
+//! credit card numbers, US Social Security numbers and dates, and (KnuPdf) Korean personal
+//! information: resident/foreigner registration, phone, business registration, bank account,
+//! passport and driver's licence numbers, alone or all at once. Each matcher works on a page's
 //! text as characters and returns character ranges; callers map them to glyphs and areas.
 
 use std::ops::Range;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Pattern {
+    /// KnuPdf: every Korean pattern below plus email addresses and credit cards, in one search.
+    KrAll,
+    KrResident,
+    KrPhone,
+    KrBusiness,
+    KrAccount,
+    KrPassport,
+    KrDriver,
     Phone,
     Email,
     CreditCard,
@@ -13,11 +23,31 @@ pub enum Pattern {
     Date,
 }
 
-pub const PATTERNS: [Pattern; 5] = [Pattern::Phone, Pattern::Email, Pattern::CreditCard, Pattern::Ssn, Pattern::Date];
+pub const PATTERNS: [Pattern; 12] = [
+    Pattern::KrAll,
+    Pattern::KrResident,
+    Pattern::KrPhone,
+    Pattern::KrBusiness,
+    Pattern::KrAccount,
+    Pattern::KrPassport,
+    Pattern::KrDriver,
+    Pattern::Phone,
+    Pattern::Email,
+    Pattern::CreditCard,
+    Pattern::Ssn,
+    Pattern::Date,
+];
 
 impl Pattern {
     pub fn label(self) -> &'static str {
         match self {
+            Pattern::KrAll => "All Korean personal information",
+            Pattern::KrResident => "Korean resident or foreigner registration numbers",
+            Pattern::KrPhone => "Korean phone numbers",
+            Pattern::KrBusiness => "Korean business registration numbers",
+            Pattern::KrAccount => "Korean bank account numbers",
+            Pattern::KrPassport => "Korean passport numbers",
+            Pattern::KrDriver => "Korean driver's licence numbers",
             Pattern::Phone => "Phone Numbers",
             Pattern::Email => "Email Addresses",
             Pattern::CreditCard => "Credit Cards",
@@ -28,6 +58,13 @@ impl Pattern {
 
     pub fn id(self) -> &'static str {
         match self {
+            Pattern::KrAll => "kr-all",
+            Pattern::KrResident => "kr-resident",
+            Pattern::KrPhone => "kr-phone",
+            Pattern::KrBusiness => "kr-business",
+            Pattern::KrAccount => "kr-account",
+            Pattern::KrPassport => "kr-passport",
+            Pattern::KrDriver => "kr-driver",
             Pattern::Phone => "phone",
             Pattern::Email => "email",
             Pattern::CreditCard => "credit-card",
@@ -300,9 +337,277 @@ fn date(s: &[char], i: usize) -> Option<usize> {
     Some(k2 + y - i)
 }
 
+
+// ---- Korean personal information (KnuPdf) -----------------------------------------------------
+
+/// Hyphen-like characters Korean documents put between number groups.
+fn dash(c: Option<&char>) -> bool {
+    matches!(c, Some('-' | '‐' | '‑' | '–' | '—'))
+}
+
+/// A number may start at `i`: the character before is not a digit, nor a dash that follows one
+/// (the middle of a longer dashed number).
+fn number_starts(s: &[char], i: usize) -> bool {
+    let prev = i.checked_sub(1).and_then(|p| s.get(p));
+    !digit(prev) && !(dash(prev) && digit(i.checked_sub(2).and_then(|p| s.get(p))))
+}
+
+/// A number may end at `end`: the next character is not a digit, nor a dash followed by one.
+fn number_ends(s: &[char], end: usize) -> bool {
+    !digit(s.get(end)) && !(dash(s.get(end)) && digit(s.get(end + 1)))
+}
+
+/// Exactly `n` digits at `i` (no more), as their values.
+fn group(s: &[char], i: usize, n: usize) -> Option<Vec<u32>> {
+    let d: Vec<u32> = (i..i + n).map(|k| s.get(k).and_then(|c| c.to_digit(10))).collect::<Option<_>>()?;
+    Some(d)
+}
+
+/// 주민등록번호 / 외국인등록번호: YYMMDD-GNNNNNN. G is 1–8 (5–8 for foreigners); the month and
+/// day must be possible. The last six may be masked (`*`, `●`, `x`), as on many printed forms,
+/// since the date of birth and gender still identify the person. Numbers issued since October
+/// 2020 carry no check digit, so none is tested.
+fn kr_resident(s: &[char], i: usize) -> Option<usize> {
+    if !number_starts(s, i) {
+        return None;
+    }
+    let birth = group(s, i, 6)?;
+    let month = birth.get(2)? * 10 + birth.get(3)?;
+    let day = birth.get(4)? * 10 + birth.get(5)?;
+    if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+        return None;
+    }
+    let sep = usize::from(dash(s.get(i + 6)) || s.get(i + 6) == Some(&' '));
+    let g = i + 6 + sep;
+    if !matches!(s.get(g).and_then(|c| c.to_digit(10)), Some(1..=8)) {
+        return None;
+    }
+    let masked = |c: Option<&char>| matches!(c, Some('*' | '●' | '○' | '■' | 'x' | 'X' | '＊'));
+    let mut has_mask = false;
+    for k in g + 1..g + 7 {
+        let c = s.get(k);
+        if masked(c) {
+            has_mask = true;
+        } else if !digit(c) {
+            return None;
+        }
+    }
+    let end = g + 7;
+    // Without a separator only a full 13-digit number counts.
+    if (sep == 0 && has_mask) || !number_ends(s, end) || masked(s.get(end)) {
+        return None;
+    }
+    Some(end - i)
+}
+
+/// Korean telephone numbers: mobile (010, 011, 016–019), Seoul 02, regional 031–064, 070, 050x
+/// and 15xx–18xx company numbers, with `-`, `.`, ` ` or `)` between groups, an optional `+82`
+/// (then without the trunk 0), and optional brackets round the area code. Only a mobile number
+/// may be written without separators (01012345678).
+fn kr_phone(s: &[char], i: usize) -> Option<usize> {
+    let sep = |c: Option<&char>| dash(c) || matches!(c, Some('.' | ' '));
+    if !number_starts(s, i) && s.get(i) != Some(&'+') && s.get(i) != Some(&'(') {
+        return None;
+    }
+    if s.get(i).is_some_and(|c| c.is_alphanumeric()) && word(i.checked_sub(1).and_then(|p| s.get(p))) {
+        return None;
+    }
+    let mut k = i;
+    let mut intl = false;
+    if s.get(k) == Some(&'+') {
+        if s.get(k + 1) != Some(&'8') || s.get(k + 2) != Some(&'2') {
+            return None;
+        }
+        intl = true;
+        k += 3;
+        if sep(s.get(k)) {
+            k += 1;
+        }
+    }
+    let bracket = s.get(k) == Some(&'(');
+    if bracket {
+        k += 1;
+    }
+    // Company numbers: 1588-1234 (no area code, never international).
+    if !intl
+        && !bracket
+        && let Some(head) = group(s, k, 4)
+        && head.first() == Some(&1)
+        && matches!(head.get(1), Some(5..=8))
+        && dash(s.get(k + 4))
+        && group(s, k + 5, 4).is_some()
+        && number_ends(s, k + 9)
+    {
+        return Some(k + 9 - i);
+    }
+    // The area code without its trunk 0 after +82, with it otherwise.
+    let zero = usize::from(!intl);
+    if !intl && s.get(k) != Some(&'0') {
+        return None;
+    }
+    let a = k + zero;
+    let d = |n: usize| s.get(a + n).and_then(|c| c.to_digit(10));
+    let (area_len, mobile) = match (d(0), d(1), d(2)) {
+        (Some(1), Some(0 | 1 | 6..=9), _) => (2, true),
+        (Some(2), _, _) => (1, false),
+        (Some(3), Some(1..=3), _) | (Some(4), Some(1..=4), _) | (Some(5), Some(1..=5), _) | (Some(6), Some(1..=4), _) => (2, false),
+        (Some(7), Some(0), _) => (2, false),
+        (Some(5), Some(0), Some(_)) => (3, false),
+        _ => return None,
+    };
+    let mut k = a + area_len;
+    if bracket {
+        if s.get(k) != Some(&')') {
+            return None;
+        }
+        k += 1;
+        if s.get(k) == Some(&' ') {
+            k += 1;
+        }
+    } else if sep(s.get(k)) {
+        k += 1;
+    } else if !(mobile && !intl) {
+        return None;
+    }
+    let plain = !bracket && !sep(s.get(a + area_len));
+    let mid = if group(s, k, 4).is_some() && !digit(s.get(k + 4)) || plain && group(s, k, 8).is_some() { 4 } else { 3 };
+    group(s, k, mid)?;
+    k += mid;
+    if sep(s.get(k)) {
+        if plain {
+            return None;
+        }
+        k += 1;
+    } else if !plain {
+        return None;
+    }
+    group(s, k, 4)?;
+    k += 4;
+    number_ends(s, k).then_some(k - i)
+}
+
+/// 사업자등록번호: NNN-NN-NNNNN with its check digit.
+fn kr_business(s: &[char], i: usize) -> Option<usize> {
+    if !number_starts(s, i) {
+        return None;
+    }
+    let a = group(s, i, 3)?;
+    let b = group(s, i + 4, 2)?;
+    let c = group(s, i + 7, 5)?;
+    if !(dash(s.get(i + 3)) && dash(s.get(i + 6)) && number_ends(s, i + 12)) {
+        return None;
+    }
+    let d: Vec<u32> = a.into_iter().chain(b).chain(c).collect();
+    let w = [1, 3, 7, 1, 3, 7, 1, 3, 5];
+    let mut sum: u32 = d.iter().zip(w).map(|(x, w)| x * w).sum();
+    sum += d.get(8)? * 5 / 10;
+    ((10 - sum % 10) % 10 == *d.get(9)?).then_some(12)
+}
+
+/// 운전면허번호: NN-NN-NNNNNN-NN, or a region name and NN-NNNNNN-NN ("서울 12-345678-90").
+fn kr_driver(s: &[char], i: usize) -> Option<usize> {
+    const REGIONS: [&str; 17] =
+        ["서울", "부산", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주", "대구", "인천", "광주", "대전", "울산", "세종"];
+    if let Some(n) = REGIONS.iter().find_map(|r| {
+        let n = r.chars().count();
+        (s.get(i..i + n)?.iter().copied().eq(r.chars()) && !i.checked_sub(1).and_then(|p| s.get(p)).is_some_and(|c| c.is_alphanumeric()))
+            .then_some(n)
+    }) {
+        let k = i + n + usize::from(s.get(i + n) == Some(&' '));
+        group(s, k, 2)?;
+        group(s, k + 3, 6)?;
+        group(s, k + 10, 2)?;
+        return (dash(s.get(k + 2)) && dash(s.get(k + 9)) && number_ends(s, k + 12)).then_some(k + 12 - i);
+    }
+    if !number_starts(s, i) {
+        return None;
+    }
+    group(s, i, 2)?;
+    group(s, i + 3, 2)?;
+    group(s, i + 6, 6)?;
+    group(s, i + 13, 2)?;
+    (dash(s.get(i + 2)) && dash(s.get(i + 5)) && dash(s.get(i + 12)) && number_ends(s, i + 15)).then_some(15)
+}
+
+/// 계좌번호: 3 or 4 groups of digits joined by `-`, 10 to 14 digits in all, the first group 3 to 6
+/// digits (국민 123456-12-123456, 신한 110-123-456789, 농협 302-1234-5678-91, 카카오뱅크
+/// 3333-01-1234567 …). Numbers another Korean pattern or a date already explains are left to it.
+fn kr_account(s: &[char], i: usize) -> Option<usize> {
+    if !number_starts(s, i) || !digit(s.get(i)) {
+        return None;
+    }
+    let mut groups = Vec::new();
+    let mut k = i;
+    loop {
+        let n = s.get(k..).unwrap_or_default().iter().take_while(|c| c.is_ascii_digit()).count();
+        if n == 0 {
+            return None;
+        }
+        groups.push(n);
+        k += n;
+        if dash(s.get(k)) && digit(s.get(k + 1)) && groups.len() < 5 {
+            k += 1;
+        } else {
+            break;
+        }
+    }
+    let total: usize = groups.iter().sum();
+    let first = *groups.first()?;
+    if !(3..=4).contains(&groups.len()) || !(10..=14).contains(&total) || !(3..=6).contains(&first) || groups.iter().any(|g| !(2..=7).contains(g)) {
+        return None;
+    }
+    let len = k - i;
+    let explained = [kr_resident, kr_phone, kr_business, kr_driver, date].iter().any(|f| f(s, i) == Some(len));
+    (!explained && number_ends(s, k)).then_some(len)
+}
+
+/// 여권번호: a type letter (M, S, R, O, D, G) and 8 digits (M12345678), or the 2021 format with a
+/// letter in fifth place (M123A4567).
+fn kr_passport(s: &[char], i: usize) -> Option<usize> {
+    if !matches!(s.get(i), Some('M' | 'S' | 'R' | 'O' | 'D' | 'G')) || i.checked_sub(1).and_then(|p| s.get(p)).is_some_and(|c| c.is_ascii_alphanumeric()) {
+        return None;
+    }
+    let old = group(s, i + 1, 8).is_some();
+    let new = group(s, i + 1, 3).is_some() && s.get(i + 4).is_some_and(char::is_ascii_uppercase) && group(s, i + 5, 4).is_some();
+    ((old || new) && !s.get(i + 9).is_some_and(|c| c.is_ascii_alphanumeric())).then_some(9)
+}
+
+/// Every Korean pattern plus email addresses and credit cards, overlapping matches merged.
+fn kr_all(text: &[char]) -> Vec<Range<usize>> {
+    let mut all: Vec<Range<usize>> = [
+        Pattern::KrResident,
+        Pattern::KrPhone,
+        Pattern::KrBusiness,
+        Pattern::KrAccount,
+        Pattern::KrPassport,
+        Pattern::KrDriver,
+        Pattern::Email,
+        Pattern::CreditCard,
+    ]
+    .into_iter()
+    .flat_map(|p| find(p, text))
+    .collect();
+    all.sort_by_key(|r| (r.start, std::cmp::Reverse(r.end)));
+    let mut out: Vec<Range<usize>> = Vec::with_capacity(all.len());
+    for r in all {
+        match out.last_mut() {
+            Some(last) if r.start < last.end => last.end = last.end.max(r.end),
+            _ => out.push(r),
+        }
+    }
+    out
+}
+
 /// Character ranges of `text` matching `pattern`.
 pub fn find(pattern: Pattern, text: &[char]) -> Vec<Range<usize>> {
     let f: fn(&[char], usize) -> Option<usize> = match pattern {
+        Pattern::KrAll => return kr_all(text),
+        Pattern::KrResident => kr_resident,
+        Pattern::KrPhone => kr_phone,
+        Pattern::KrBusiness => kr_business,
+        Pattern::KrAccount => kr_account,
+        Pattern::KrPassport => kr_passport,
+        Pattern::KrDriver => kr_driver,
         Pattern::Phone => phone,
         Pattern::Email => email,
         Pattern::CreditCard => credit_card,
@@ -468,5 +773,106 @@ mod tests {
     fn case_folding_keeps_one_character_per_character() {
         let s: Vec<char> = "\u{130}\u{131}I\u{15E}".chars().collect();
         assert_eq!(s.iter().copied().map(fold).collect::<String>(), "iii\u{15F}");
+    }
+
+    // ---- Korean patterns (KnuPdf). Every number here is made up for the test. ----
+
+    #[test]
+    fn korean_resident_and_foreigner_registration_numbers() {
+        assert_eq!(
+            found(Pattern::KrResident, "주민등록번호: 900101-1234567, 외국인 850315-5123456, 공백 900101 2234567, 붙임 9001014234567"),
+            ["900101-1234567", "850315-5123456", "900101 2234567", "9001014234567"]
+        );
+        // Masked forms still identify the person.
+        assert_eq!(found(Pattern::KrResident, "신청인 900101-1******, 851224-2●●●●●●"), ["900101-1******", "851224-2●●●●●●"]);
+        // Impossible month or day, gender digit 0 or 9, too long or too short, masked without a dash.
+        assert_eq!(
+            found(Pattern::KrResident, "901301-1234567, 900132-1234567, 900101-9234567, 900101-12345678, 900101-123456, 9001011******, 1900101-1234567"),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn korean_phone_numbers() {
+        assert_eq!(
+            found(
+                Pattern::KrPhone,
+                "휴대전화 010-1234-5678, 011 234 5678, 010.9876.5432, 01012345678, 서울 02-123-4567, 02-1234-5678, (02) 123-4567, 경기 031-123-4567, 064-123-4567, 인터넷 070-1234-5678, 안심 0505-123-4567, 대표 1588-1234, 국제 +82-10-1234-5678, +82 2 123 4567"
+            ),
+            [
+                "010-1234-5678",
+                "011 234 5678",
+                "010.9876.5432",
+                "01012345678",
+                "02-123-4567",
+                "02-1234-5678",
+                "(02) 123-4567",
+                "031-123-4567",
+                "064-123-4567",
+                "070-1234-5678",
+                "0505-123-4567",
+                "1588-1234",
+                "+82-10-1234-5678",
+                "+82 2 123 4567"
+            ]
+        );
+        // Not phone numbers: unknown area codes, unseparated landlines, too many digits, part of a longer number.
+        assert_eq!(found(Pattern::KrPhone, "012-345-6789, 0212345678, 010-1234-56789, 110-123-456789, 1234-5678, 2026-10-17"), Vec::<String>::new());
+    }
+
+    #[test]
+    fn korean_business_registration_numbers_need_the_check_digit() {
+        // 123-45-67891 has the right check digit; 123-45-67890 does not.
+        assert_eq!(found(Pattern::KrBusiness, "사업자등록번호 123-45-67891, 잘못된 번호 123-45-67890, 1234567891"), ["123-45-67891"]);
+    }
+
+    #[test]
+    fn korean_driver_licence_numbers() {
+        assert_eq!(
+            found(Pattern::KrDriver, "면허번호 11-12-345678-90, 서울 12-345678-90, 경기12-345678-01"),
+            ["11-12-345678-90", "서울 12-345678-90", "경기12-345678-01"]
+        );
+        assert_eq!(found(Pattern::KrDriver, "11-12-345678-901, 서울특별시 12-345678-9"), Vec::<String>::new());
+    }
+
+    #[test]
+    fn korean_passport_numbers() {
+        assert_eq!(found(Pattern::KrPassport, "여권 M12345678, 신형 M123A4567, 관용 S98765432"), ["M12345678", "M123A4567", "S98765432"]);
+        assert_eq!(found(Pattern::KrPassport, "AM12345678, M1234567, M123456789, m12345678, MODEL123"), Vec::<String>::new());
+    }
+
+    #[test]
+    fn korean_bank_account_numbers() {
+        assert_eq!(
+            found(
+                Pattern::KrAccount,
+                "국민 123456-12-123456, 신한 110-123-456789, 우리 1002-123-456789, 농협 302-1234-5678-91, 기업 123-123456-01-012, 카카오뱅크 3333-01-1234567"
+            ),
+            ["123456-12-123456", "110-123-456789", "1002-123-456789", "302-1234-5678-91", "123-123456-01-012", "3333-01-1234567"]
+        );
+        // Left to the pattern that explains them, or not account-shaped at all.
+        assert_eq!(
+            found(Pattern::KrAccount, "010-1234-5678, 900101-1234567, 123-45-67891, 11-12-345678-90, 2026-10-17, 12-34-56, 1234567890123"),
+            Vec::<String>::new()
+        );
+    }
+
+    #[test]
+    fn all_korean_personal_information_at_once() {
+        let text = "성명 홍길동, 주민등록번호 900101-1234567, 연락처 010-1234-5678, 이메일 hong@example.kr, 계좌 110-123-456789, 사업자 123-45-67891, 여권 M12345678";
+        assert_eq!(
+            found(Pattern::KrAll, text),
+            ["900101-1234567", "010-1234-5678", "hong@example.kr", "110-123-456789", "123-45-67891", "M12345678"]
+        );
+    }
+
+    #[test]
+    fn korean_patterns_never_panic_on_short_or_odd_text() {
+        for p in PATTERNS {
+            for s in ["", "-", "0", "+82", "(", "(02", "서울", "M", "900101-", "010-", "123-45-", "1-2-3-4-5-6-7-8", "+8", "0505-"] {
+                let _ = found(p, s);
+            }
+        }
+        assert!(PATTERNS.iter().all(|p| Pattern::from_id(p.id()) == Some(*p)));
     }
 }

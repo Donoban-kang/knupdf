@@ -213,7 +213,8 @@ impl Default for SearchDraft {
             words: String::new(),
             case_sensitive: false,
             whole_words: false,
-            pattern: RedactPattern::Phone,
+            // KnuPdf: Korean personal information first.
+            pattern: RedactPattern::KrAll,
             found: None,
         }
     }

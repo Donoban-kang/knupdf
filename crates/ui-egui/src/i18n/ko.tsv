@@ -1112,10 +1112,10 @@
 	Single word or phrase	단일 단어 또는 구
 	Text to find	찾을 텍스트
 	Patterns	패턴
-	Phone Numbers	전화번호
+	Phone Numbers	전화번호 (국제 형식)
 	Email Addresses	이메일 주소
 	Credit Cards	신용카드 번호
-	Social Security Numbers	주민등록번호
+	Social Security Numbers	미국 사회보장번호 (SSN)
 	Dates	날짜
 	Text in images isn't found; recognise text (OCR) first.	이미지 속 텍스트는 찾지 못합니다. 먼저 텍스트 인식(OCR)을 하세요.
 	No matches.	일치하는 항목 없음.
@@ -2874,3 +2874,10 @@ theme	Appearance	모양
 	not an iframe	iframe이 아닙니다
 	the print page didn't load	인쇄 페이지를 불러오지 못했습니다
 	Made by {name}	만든이: {name}
+	All Korean personal information	한국 개인정보 전체 (주민·외국인등록번호, 전화, 사업자, 계좌, 여권, 면허, 이메일, 카드)
+	Korean resident or foreigner registration numbers	주민등록번호·외국인등록번호
+	Korean phone numbers	전화번호 (한국)
+	Korean business registration numbers	사업자등록번호
+	Korean bank account numbers	계좌번호
+	Korean passport numbers	여권번호
+	Korean driver's licence numbers	운전면허번호
