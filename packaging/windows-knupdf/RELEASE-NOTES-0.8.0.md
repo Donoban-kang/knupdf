@@ -28,8 +28,8 @@ KnuPdf 첫 시험판입니다. [PdfCraft](https://github.com/storytold/pdfcraft)
 ## 파일 확인값 (SHA-256)
 
 ```
-3b29345bcbc35c7aac50dfbe2a6e730b5c43d21528d2699dd6309e5998561475  KnuPdf-0.8.0-windows-x64-setup.exe
-9e91d3fa1574c20068a79a1b6b7240d83393bd7d2fca530d8c36afc010c11c63  KnuPdf-0.8.0-windows-x64-portable.zip
+c2cb5e518a3eee93fe98f3b15b84ed36d34adc10f80d05b7fcc6be3fb121d051  KnuPdf-0.8.0-windows-x64-setup.exe
+85bfec062784ebcd9c3f16ba880dacb942a92a9b7ec0cca1b060c3be901a061d  KnuPdf-0.8.0-windows-x64-portable.zip
 ```
 
 ## 라이선스
