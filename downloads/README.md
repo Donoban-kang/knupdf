@@ -14,13 +14,13 @@
 받은 파일이 바뀌지 않았는지 확인할 때 써요. PowerShell에서 `Get-FileHash 파일이름`을 실행해 아래 값과 같은지 비교해요.
 
 ```
-42a3efbfab43e047ca11f86a37453060c23affddeed29adbbe3a1a0d455df621  KnuPdf-0.8.0-windows-x64-setup.exe
-1fcfc401367c03274453f4b728d312de0c85f6b4f07884977cbed54641812005  KnuPdf-0.8.0-windows-x64-portable.zip
+3b29345bcbc35c7aac50dfbe2a6e730b5c43d21528d2699dd6309e5998561475  KnuPdf-0.8.0-windows-x64-setup.exe
+9e91d3fa1574c20068a79a1b6b7240d83393bd7d2fca530d8c36afc010c11c63  KnuPdf-0.8.0-windows-x64-portable.zip
 ```
 
 ## 이 버전에 들어 있는 것
 
-화면 전체 한국어, 한글 글꼴, 한국 개인정보 가리기(주민·외국인등록번호, 전화, 사업자, 계좌, 여권, 운전면허, 이메일, 카드), 페이지 정리·합치기·분할, 주석, 양식, 채우기 및 서명, 디지털 서명, 암호 보호, 압축, 텍스트 인식(OCR, 라틴 문자).
+화면 전체 한국어, 한글 글꼴, 한글(.hwpx)·Word·PowerPoint로 내보내기, 한국 개인정보 가리기(주민·외국인등록번호, 전화, 사업자, 계좌, 여권, 운전면허, 이메일, 카드), 페이지 정리·합치기·분할, 주석, 양식, 채우기 및 서명, 디지털 서명, 암호 보호, 압축, 텍스트 인식(OCR, 라틴 문자).
 자세한 내용: [RELEASE-NOTES-0.8.0.md](../packaging/windows-knupdf/RELEASE-NOTES-0.8.0.md)
 
 > 빌드 방법(이 파일을 직접 다시 만들기): `packaging/windows-knupdf/build-linux.sh` · 관리 안내는 [HANDOFF.md](../HANDOFF.md)
