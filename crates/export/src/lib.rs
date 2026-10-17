@@ -30,6 +30,37 @@ pub struct Block {
     pub color: [f64; 3],
     /// Counterclockwise baseline angle in user space (degrees).
     pub rotation: f64,
+    /// The text split where its style changes inside the paragraph (a bold phrase in a
+    /// sentence). Empty when all of it has the block's style; writers ignore runs that do not
+    /// add up to `text`.
+    pub runs: Vec<Run>,
+}
+
+/// A stretch of a [`Block`]'s text in one style.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Run {
+    pub text: String,
+    pub bold: bool,
+    pub italic: bool,
+    pub color: [f64; 3],
+}
+
+impl Block {
+    /// The paragraph as styled runs: [`Block::runs`] when they add up to the text, otherwise the
+    /// whole text in the block's style.
+    pub(crate) fn styled(&self) -> Vec<Run> {
+        let mut rest = self.text.as_str();
+        let exact = !self.runs.is_empty()
+            && self.runs.iter().all(|r| match rest.strip_prefix(r.text.as_str()) {
+                Some(tail) => {
+                    rest = tail;
+                    true
+                }
+                None => false,
+            })
+            && rest.is_empty();
+        if exact { self.runs.clone() } else { vec![Run { text: self.text.clone(), bold: self.bold, italic: self.italic, color: self.color }] }
+    }
 }
 
 /// An image of a page.
@@ -369,12 +400,20 @@ table{{border-collapse:collapse;margin:1em 0}}td,th{{border:1px solid #999;paddi
     for it in items(pages) {
         match it {
             Item::Para(b, lvl) => {
-                let mut t = esc(&b.text);
-                if b.italic {
-                    t = format!("<em>{t}</em>");
-                }
-                if b.bold && lvl == 0 {
-                    t = format!("<strong>{t}</strong>");
+                let mut t = String::new();
+                for r in b.styled() {
+                    let mut part = esc(&r.text);
+                    if r.italic {
+                        part = format!("<em>{part}</em>");
+                    }
+                    if r.bold && lvl == 0 {
+                        part = format!("<strong>{part}</strong>");
+                    }
+                    if rgb8(r.color) != rgb8(b.color) {
+                        let [red, green, blue] = rgb8(r.color);
+                        part = format!("<span style=\"color:#{red:02X}{green:02X}{blue:02X}\">{part}</span>");
+                    }
+                    t.push_str(&part);
                 }
                 let style = hex(b.color).map_or(String::new(), |h| format!(" style=\"color:#{h}\""));
                 match lvl {
@@ -440,6 +479,11 @@ fn run_xml(text: &str, size: f64, bold: bool, italic: bool, color: [f64; 3]) -> 
     let half_points = if size.is_finite() { (size * 2.0).round().clamp(2.0, 3276.0) as i64 } else { 24 };
     rpr.push_str(&format!("<w:sz w:val=\"{half_points}\"/>"));
     format!("<w:r><w:rPr>{rpr}</w:rPr><w:t xml:space=\"preserve\">{}</w:t></w:r>", esc(text))
+}
+
+/// A paragraph's runs.
+fn runs_xml(b: &Block) -> String {
+    b.styled().iter().map(|r| run_xml(&r.text, b.size, r.bold, r.italic, r.color)).collect()
 }
 
 /// One Word table: explicit absent borders (alignment alone cannot prove PDF rules), a grid sized
@@ -580,7 +624,7 @@ fn positioned_page<'a>(page: &'a Page, media: &mut Vec<(String, &'a Image)>, sha
         );
         s.push_str(&format!(
             "<w:r><w:pict><v:rect id=\"Text{}\" style=\"{style}\" filled=\"f\" stroked=\"f\"><v:textbox inset=\"0,0,0,0\" style=\"mso-fit-shape-to-text:t\"><w:txbxContent><w:p><w:pPr><w:spacing w:before=\"0\" w:after=\"0\"/></w:pPr>{}</w:p></w:txbxContent></v:textbox><w10:wrap type=\"none\"/></v:rect></w:pict></w:r>",
-            shape_id, run_xml(&b.text, b.size, b.bold, b.italic, b.color)
+            shape_id, runs_xml(b)
         ));
     }
     for im in &page.images {
@@ -636,7 +680,7 @@ pub fn docx(pages: &[Page], title: &str) -> Vec<u8> {
     let mut media: Vec<(String, &Image)> = Vec::new();
     // Word needs a paragraph between adjacent tables and after the last one in the body.
     let mut after_table = false;
-    let run = |b: &Block| run_xml(&b.text, b.size, b.bold, b.italic, b.color);
+    let run = runs_xml;
     let mut shape_id = 0usize;
     for (page_index, page) in pages.iter().enumerate() {
         let (pw, _) = word_page_size(page);
@@ -781,7 +825,7 @@ pub fn rtf(pages: &[Page]) -> String {
     };
     for it in &items {
         match it {
-            Item::Para(b, _) => note(b.color),
+            Item::Para(b, _) => b.styled().iter().for_each(|r| note(r.color)),
             Item::Table(t) => t.rows.iter().flatten().for_each(|c| note(c.color)),
             Item::Img(_) | Item::PageBreak => {}
         }
@@ -802,15 +846,32 @@ pub fn rtf(pages: &[Page]) -> String {
     for it in items {
         match it {
             Item::Para(b, _) => {
-                let mut fmt = format!("\\fs{}", (b.size * 2.0).round() as i64);
-                if b.bold {
-                    fmt.push_str("\\b");
+                let fmt = |r: &Run| {
+                    let mut fmt = String::new();
+                    if r.bold {
+                        fmt.push_str("\\b");
+                    }
+                    if r.italic {
+                        fmt.push_str("\\i");
+                    }
+                    fmt.push_str(&cf(r.color));
+                    fmt
+                };
+                let size = format!("\\fs{}", (b.size * 2.0).round() as i64);
+                match b.styled().as_slice() {
+                    [r] => s.push_str(&format!("{{\\pard{size}{} {}\\par}}\n", fmt(r), rtf_text(&r.text))),
+                    runs => {
+                        // One group per run; a space after `{` alone would be text.
+                        let body: String = runs
+                            .iter()
+                            .map(|r| match fmt(r) {
+                                f if f.is_empty() => format!("{{{}}}", rtf_text(&r.text)),
+                                f => format!("{{{f} {}}}", rtf_text(&r.text)),
+                            })
+                            .collect();
+                        s.push_str(&format!("{{\\pard{size} {body}\\par}}\n"));
+                    }
                 }
-                if b.italic {
-                    fmt.push_str("\\i");
-                }
-                fmt.push_str(&cf(b.color));
-                s.push_str(&format!("{{\\pard{fmt} {}\\par}}\n", rtf_text(&b.text)));
             }
             Item::Table(t) => {
                 let mut edges = t.cols.clone();
@@ -861,6 +922,7 @@ mod tests {
             bold,
             italic: false,
             color: [0.0; 3],
+            runs: Vec::new(),
             rotation: 0.0,
         };
         Page {
@@ -942,6 +1004,7 @@ mod tests {
             bold: false,
             italic: false,
             color: [0.8; 3],
+            runs: Vec::new(),
             rotation: 0.0,
         });
         p.images = page().images;
@@ -1004,6 +1067,7 @@ mod tests {
             bold: false,
             italic: false,
             color: [0.0; 3],
+            runs: Vec::new(),
             rotation: 0.0,
         });
         let xml = part(&docx(&[p.clone()], "Receipt\u{1}"), "word/document.xml");
@@ -1016,6 +1080,30 @@ mod tests {
         let narrow = Page { width: 100.0, height: 200.0, ..page() };
         let xml = part(&docx(&[narrow], "Narrow"), "word/document.xml");
         assert!(xml.contains("<w:pgMar w:top=\"500\" w:right=\"250\" w:bottom=\"500\" w:left=\"250\""), "{xml}");
+    }
+
+    /// A bold phrase inside a sentence: one paragraph in every format, with only the phrase bold.
+    #[test]
+    fn an_inline_bold_phrase_stays_in_its_paragraph_in_every_format() {
+        let run = |text: &str, bold: bool| Run { text: text.into(), bold, italic: false, color: [0.0; 3] };
+        let mut p = page();
+        p.blocks[3].text = "Please read the notice today.".into();
+        p.blocks[3].runs = vec![run("Please read ", false), run("the notice", true), run(" today.", false)];
+        let xml = part(&docx(&[p.clone()], "Runs"), "word/document.xml");
+        assert!(
+            xml.contains("<w:t xml:space=\"preserve\">Please read </w:t></w:r><w:r><w:rPr><w:b/><w:sz w:val=\"22\"/></w:rPr><w:t xml:space=\"preserve\">the notice</w:t>"),
+            "{xml}"
+        );
+        assert!(html(&[p.clone()], "Runs").contains("<p>Please read <strong>the notice</strong> today.</p>"));
+        assert!(rtf(&[p.clone()]).contains("{Please read }{\\b the notice}{ today.}\\par"));
+        let slide = part(&pptx(&[p.clone()], "Runs"), "ppt/slides/slide1.xml");
+        assert!(slide.contains("<a:t>Please read </a:t></a:r><a:r><a:rPr sz=\"1100\" b=\"1\"></a:rPr><a:t>the notice</a:t>"), "{slide}");
+        let sec = part(&hwpx(&[p.clone()], "Runs"), "Contents/section0.xml");
+        assert!(sec.contains("<hp:t>Please read </hp:t></hp:run><hp:run charPrIDRef="), "{sec}");
+        assert!(sec.contains("><hp:t>the notice</hp:t></hp:run><hp:run charPrIDRef="), "{sec}");
+        // Runs that do not add up to the text are ignored: the paragraph keeps its own style.
+        p.blocks[3].runs = vec![run("Something else", true)];
+        assert!(html(&[p], "Runs").contains("<p>Please read the notice today.</p>"));
     }
 
     #[test]
@@ -1057,6 +1145,7 @@ mod tests {
             bold: false,
             italic: true,
             color: [0.0; 3],
+            runs: Vec::new(),
             rotation: 0.0,
         });
         let r = rtf(&[p]);
@@ -1074,6 +1163,7 @@ mod tests {
             bold: false,
             italic: false,
             color: [0.0; 3],
+            runs: Vec::new(),
             rotation: 0.0,
         };
         Page {
@@ -1097,6 +1187,7 @@ mod tests {
                     bold: false,
                     italic: false,
                     color: [0.0; 3],
+                    runs: Vec::new(),
                     rotation: 0.0,
                 },
             ],
@@ -1149,7 +1240,16 @@ mod tests {
             .map(|i| {
                 let (row, col) = (i / 2, i / 2 + i % 2);
                 let (x, y) = (10.0 + col as f64 * 20.0, 10_000.0 - row as f64 * 14.0);
-                Block { text: "x".into(), rect: [x, y, x + 8.0, y + 12.0], size: 11.0, bold: false, italic: false, color: [0.0; 3], rotation: 0.0 }
+                Block {
+                    text: "x".into(),
+                    rect: [x, y, x + 8.0, y + 12.0],
+                    size: 11.0,
+                    bold: false,
+                    italic: false,
+                    color: [0.0; 3],
+                    runs: Vec::new(),
+                    rotation: 0.0,
+                }
             })
             .collect();
         let started = std::time::Instant::now();
@@ -1175,6 +1275,7 @@ mod tests {
                             bold: false,
                             italic: false,
                             color: [0.0; 3],
+                            runs: Vec::new(),
                             rotation: 0.0,
                         }
                     })
@@ -1197,6 +1298,7 @@ mod tests {
             bold: false,
             italic: false,
             color: [0.0; 3],
+            runs: Vec::new(),
             rotation: 0.0,
         };
         let p = Page {

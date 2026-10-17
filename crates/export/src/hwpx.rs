@@ -235,8 +235,16 @@ impl<'a> Section<'a> {
     }
 
     fn block(&mut self, b: &Block, level: u8) {
-        let run = self.run(&b.text, b.size, b.bold || level > 0, b.italic, b.color);
-        self.para(usize::from(level > 0), &run);
+        let mut runs = String::new();
+        for r in b.styled() {
+            let id = self.chars.id(b.size, r.bold || level > 0, r.italic, r.color);
+            runs.push_str(&format!("<hp:run charPrIDRef=\"{id}\"><hp:t>{}</hp:t></hp:run>", text_xml(&r.text)));
+        }
+        if self.prev_text.len() < 1024 {
+            self.prev_text.push_str(&b.text);
+            self.prev_text.push('\n');
+        }
+        self.para(usize::from(level > 0), &runs);
     }
 
     fn table(&mut self, t: &Table) {
@@ -435,7 +443,7 @@ mod tests {
     use crate::{Block, Cell};
 
     fn block(text: &str, y: f64, size: f64, bold: bool) -> Block {
-        Block { text: text.into(), rect: [72.0, y, 500.0, y + size], size, bold, italic: false, color: [0.0; 3], rotation: 0.0 }
+        Block { text: text.into(), rect: [72.0, y, 500.0, y + size], size, bold, italic: false, color: [0.0; 3], runs: Vec::new(), rotation: 0.0 }
     }
 
     fn page(blocks: Vec<Block>) -> Page {

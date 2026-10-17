@@ -179,15 +179,35 @@ impl crate::Document {
                     .into_iter()
                     .filter(|b| !b.text.trim().is_empty())
                     .map(|b| {
-                        let f = b.base_font.to_ascii_lowercase();
+                        let bold = |font: &str| {
+                            let f = font.to_ascii_lowercase();
+                            f.contains("bold") || f.contains("black") || f.contains("heavy")
+                        };
+                        let italic = |font: &str| {
+                            let f = font.to_ascii_lowercase();
+                            f.contains("italic") || f.contains("oblique")
+                        };
+                        let runs: Vec<pdfcraft_export::Run> = b
+                            .runs
+                            .iter()
+                            .map(|r| pdfcraft_export::Run {
+                                text: r.text.clone(),
+                                bold: bold(&r.base_font),
+                                italic: italic(&r.base_font),
+                                color: r.color,
+                            })
+                            .collect();
+                        // A paragraph is bold or italic (a heading candidate) only when all of it is.
+                        let all = |f: fn(&pdfcraft_export::Run) -> bool, whole: bool| if runs.is_empty() { whole } else { runs.iter().all(f) };
                         pdfcraft_export::Block {
+                            bold: all(|r| r.bold, bold(&b.base_font)),
+                            italic: all(|r| r.italic, italic(&b.base_font)),
                             text: b.text,
                             rect: visible_rect(b.rect),
                             size: b.size * unit,
-                            bold: f.contains("bold") || f.contains("black") || f.contains("heavy"),
-                            italic: f.contains("italic") || f.contains("oblique"),
                             color: b.color,
                             rotation: b.rotation - f64::from(info.rotation),
+                            runs,
                         }
                     })
                     .collect();
