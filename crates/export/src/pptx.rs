@@ -174,7 +174,7 @@ pub fn pptx(pages: &[Page], title: &str) -> Vec<u8> {
                     let mut paras_xml = String::new();
                     let mut est_h_pt = 0.0;
                     while let Some((_, _, SlideBodyItem::Para(b))) = items.get(i) {
-                        let run = run_drawingml(&b.text, b.size, b.bold, b.italic, b.color);
+                        let run: String = b.styled().iter().map(|r| run_drawingml(&r.text, b.size, r.bold, r.italic, r.color)).collect();
                         paras_xml.push_str(&format!("<a:p>{run}</a:p>"));
                         let lines = (b.text.len() as f64 / 60.0).ceil().max(1.0);
                         est_h_pt += (b.size.max(10.0) * 1.3) * lines + 6.0;
@@ -368,6 +368,7 @@ mod tests {
                     bold: true,
                     italic: false,
                     color: [0.1, 0.2, 0.3],
+                    runs: Vec::new(),
                     rotation: 0.0,
                 },
                 Block {
@@ -377,6 +378,7 @@ mod tests {
                     bold: false,
                     italic: false,
                     color: [0.0; 3],
+                    runs: Vec::new(),
                     rotation: 0.0,
                 },
                 Block {
@@ -386,6 +388,7 @@ mod tests {
                     bold: false,
                     italic: true,
                     color: [0.0; 3],
+                    runs: Vec::new(),
                     rotation: 0.0,
                 },
             ],
@@ -508,6 +511,7 @@ mod tests {
             bold: false,
             italic: false,
             color: [0.0; 3],
+            runs: Vec::new(),
             rotation: 0.0,
         };
         let table_page = Page {
@@ -608,6 +612,7 @@ mod tests {
             bold: false,
             italic: false,
             color: [0.0; 3],
+            runs: Vec::new(),
             rotation: 0.0,
         };
         let mut blocks = vec![huge("Title", f64::MAX, 500.0)];
@@ -673,6 +678,7 @@ mod tests {
             bold: false,
             italic: false,
             color: [0.0; 3],
+            runs: Vec::new(),
             rotation: 0.0,
         };
         let p = Page {
@@ -687,6 +693,7 @@ mod tests {
                     bold: true,
                     italic: false,
                     color: [0.0; 3],
+                    runs: Vec::new(),
                     rotation: 0.0,
                 },
                 // Table where one cell has a very large number (e.g. 36 pt callout in the table)

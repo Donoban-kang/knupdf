@@ -35,8 +35,9 @@ pub(super) fn group_blocks(lines: &[TextLine]) -> Vec<TextBlock> {
     group_layout(lines, true)
 }
 
-/// Exporters currently represent a block with one style. Keep their style boundaries until
-/// they support rich runs, while edit selection may encompass the complete visual region.
+/// Reading blocks for export: a style change inside a line of one size (a bold phrase in a
+/// sentence) stays in the paragraph as [`TextBlock::runs`]; other style boundaries still separate
+/// blocks, while edit selection may encompass the complete visual region.
 pub(super) fn group_reading_blocks(lines: &[TextLine]) -> Vec<TextBlock> {
     group_layout(lines, false)
 }
@@ -64,6 +65,35 @@ fn same_style(a: &TextLine, b: &TextLine) -> bool {
         && (a.size - b.size).abs() < 0.01
 }
 
+/// `b` continues `a`'s line in another weight, slant or colour: same size and direction, and no
+/// wider apart than a word space, so table cells and tab stops stay separate.
+fn inline_run(a: &TextLine, b: &TextLine, gap: f64) -> bool {
+    let size = a.size.max(b.size);
+    (a.rotation() - b.rotation()).abs() < 0.01 && (a.size - b.size).abs() <= size * 0.05 && gap < size * 0.6
+}
+
+/// Append `text` in `line`'s style, extending the last run when the style is the same.
+fn push_run(runs: &mut Vec<StyledRun>, text: &str, line: &TextLine) {
+    if let Some(last) = runs.last_mut()
+        && last.base_font == line.base_font
+        && last.bold == line.bold
+        && last.italic == line.italic
+        && last.color == line.color
+        && (last.size - line.size).abs() < 0.01
+    {
+        last.text.push_str(text);
+    } else {
+        runs.push(StyledRun {
+            text: text.to_string(),
+            base_font: line.base_font.clone(),
+            size: line.size,
+            bold: line.bold,
+            italic: line.italic,
+            color: line.color,
+        });
+    }
+}
+
 fn group_layout(lines: &[TextLine], mixed: bool) -> Vec<TextBlock> {
     let mut rows: Vec<Vec<usize>> = Vec::new();
     for (i, line) in lines.iter().enumerate() {
@@ -73,7 +103,7 @@ fn group_layout(lines: &[TextLine], mixed: bool) -> Vec<TextBlock> {
             // is a table cell or a tab stop, which a rewrite would close up.
             let scanned = !mixed || (invisible(prev) == invisible(line) && (!invisible(line) || gap < prev.size.max(line.size) * 0.6));
             scanned
-                && (mixed || same_style(prev, line))
+                && (mixed || same_style(prev, line) || inline_run(prev, line, gap))
                 && same_plane(prev, line)
                 && (prev.frame_origin().1 - line.frame_origin().1).abs() < prev.size.min(line.size) * 0.2
                 && gap >= -prev.size.min(line.size) * 0.2
@@ -129,10 +159,13 @@ fn group_layout(lines: &[TextLine], mixed: bool) -> Vec<TextBlock> {
                 lines: Vec::new(),
                 rows: Vec::new(),
                 invisible: true,
+                runs: Vec::new(),
             });
         }
         let Some(block) = blocks.last_mut() else { continue };
         let mut row_text = String::new();
+        // `row_text` as (text, source line) pieces, for the runs.
+        let mut row_pieces: Vec<(String, usize)> = Vec::new();
         if !block.rows.is_empty() {
             block.editor_text.push('\n');
         }
@@ -146,22 +179,48 @@ fn group_layout(lines: &[TextLine], mixed: bool) -> Vec<TextBlock> {
             {
                 row_text.push(' ');
                 block.editor_text.push(' ');
+                if let Some(piece) = row_pieces.last_mut() {
+                    piece.0.push(' ');
+                }
             }
             let start = block.editor_text.len();
             block.editor_text.push_str(&line.text);
             block.spans.push((start..block.editor_text.len(), index));
             row_text.push_str(&line.text);
+            row_pieces.push((line.text.clone(), index));
             block.invisible &= line.origin.state.render_mode == 3;
             block.lines.push(index);
         }
         if !block.text.is_empty() {
             if block.text.ends_with('-') {
                 block.text.pop();
+                if let Some(run) = block.runs.last_mut() {
+                    run.text.pop();
+                    if run.text.is_empty() {
+                        block.runs.pop();
+                    }
+                }
             } else {
                 block.text.push(' ');
+                if let Some(run) = block.runs.last_mut() {
+                    run.text.push(' ');
+                }
             }
         }
-        block.text.push_str(row_text.trim_matches(paragraph_separator));
+        let trimmed = row_text.trim_matches(paragraph_separator);
+        block.text.push_str(trimmed);
+        // The pieces cut to the trimmed text. Trimming and the pieces both end on char boundaries.
+        let start = row_text.len() - row_text.trim_start_matches(paragraph_separator).len();
+        let end = start + trimmed.len();
+        let mut at = 0;
+        for (piece, index) in &row_pieces {
+            let (a, b) = (at, at + piece.len());
+            at = b;
+            let (lo, hi) = (a.max(start), b.min(end));
+            if let (true, Some(text), Some(line)) = (lo < hi, piece.get(lo - a..hi - a), lines.get(*index)) {
+                push_run(&mut block.runs, text, line);
+            }
+        }
         block.rect = union(block.rect, rect);
         block.rows.push(row);
     }

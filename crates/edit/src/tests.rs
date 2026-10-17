@@ -2747,6 +2747,33 @@ fn form_xobjects_that_fan_out_stop_at_the_visit_budget() {
 
 /// Forms that draw themselves or each other, have no resources, a malformed matrix, or are
 /// missing are read once (or skipped) without panicking or looping.
+/// A bold phrase inside a sentence stays in the sentence's reading block, as a run of its own,
+/// so exports keep one paragraph. A bold label a column away is still a separate block.
+#[test]
+fn reading_blocks_keep_an_inline_bold_phrase_as_a_run() {
+    let page = stream(
+        "",
+        "BT /F1 10 Tf 72 700 Td (Please read ) Tj /F2 10 Tf (the notice) Tj /F1 10 Tf ( today.) Tj ET \
+         BT /F2 10 Tf 72 600 Td (Name) Tj ET BT /F1 10 Tf 300 600 Td (Kim) Tj ET",
+    );
+    let doc = build(&[
+        "<< /Type /Catalog /Pages 2 0 R >>",
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 600 800] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>",
+        &page,
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>",
+    ]);
+    let blocks = text::reading_blocks(&doc, 0).unwrap();
+    let texts: Vec<&str> = blocks.iter().map(|b| b.text.as_str()).collect();
+    assert_eq!(texts, ["Please read the notice today.", "Name", "Kim"]);
+    let runs: Vec<(&str, &str)> = blocks[0].runs.iter().map(|r| (r.text.as_str(), r.base_font.as_str())).collect();
+    assert_eq!(runs, [("Please read ", "Helvetica"), ("the notice", "Helvetica-Bold"), (" today.", "Helvetica")]);
+    for b in &blocks {
+        assert_eq!(b.runs.iter().map(|r| r.text.as_str()).collect::<String>(), b.text, "runs add up to the text");
+    }
+}
+
 #[test]
 fn hostile_form_xobjects_are_read_once() {
     let page = stream("", "/Loop Do /A Do /NoRes Do /Bad Do /Missing Do /F1 Do");
