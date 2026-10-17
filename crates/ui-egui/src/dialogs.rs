@@ -7,6 +7,9 @@ use pdfcraft_engine::Edit;
 
 use crate::{CloseRequest, Dialog, PdfCraftApp, PropsTab, panels::human_size, widgets};
 
+/// The KnuPdf author shown in the About dialog.
+const KNUPDF_AUTHOR: &str = "강돈호";
+
 const INFO_KEYS: [&str; 4] = ["Title", "Author", "Subject", "Keywords"];
 
 pub fn show(app: &mut PdfCraftApp, ctx: &egui::Context) {
@@ -1156,11 +1159,11 @@ fn dialogs(app: &mut PdfCraftApp, ctx: &egui::Context) {
                             ui.vertical(|ui| {
                                 ui.label(egui::RichText::new("KnuPdf").font(theme::semibold(20.0)));
                                 ui.label(crate::i18n::fmt(tl!("Version {v}"), &[("v", &pdfcraft_engine::build_info::version())]));
+                                ui.label(crate::i18n::fmt(tl!("Made by {name}"), &[("name", KNUPDF_AUTHOR)]));
                             });
                         });
                         ui.add_space(6.0);
                         ui.label(tl!("A clean-room, open-source PDF application written in Rust. MIT OR Apache-2.0."));
-                        ui.label(egui::RichText::new(tl!("Based on PdfCraft")).color(t.text_muted));
                         ui.label(
                             egui::RichText::new(
                                 tl!("Rendering: hayro (bootstrap) · UI: egui · Icons: Lucide (ISC) · Fonts: Inter, JetBrains Mono, Dancing Script, KnuPdf Hangul (OFL)"),

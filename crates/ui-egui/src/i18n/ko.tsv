@@ -2873,3 +2873,4 @@ theme	Appearance	모양
 	no document body	문서 본문이 없습니다
 	not an iframe	iframe이 아닙니다
 	the print page didn't load	인쇄 페이지를 불러오지 못했습니다
+	Made by {name}	만든이: {name}
