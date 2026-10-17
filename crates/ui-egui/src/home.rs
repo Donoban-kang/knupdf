@@ -22,31 +22,13 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
         egui::Frame::NONE.inner_margin(egui::Margin { left: 36, right: 36, top: 28, bottom: 28 }).show(ui, |ui| {
-            ui.label(egui::RichText::new(tl!("Welcome to KNUPDF")).font(theme::semibold(24.0)));
+            ui.label(egui::RichText::new(tl!("Welcome to KnuPdf")).font(theme::semibold(24.0)));
             ui.label(
                 egui::RichText::new(tl!("An open-source PDF workbench — local, private, and scriptable."))
                     .color(t.text_muted)
                     .font(theme::regular(14.0)),
             );
             ui.add_space(14.0);
-            egui::Frame::NONE
-                .fill(t.card)
-                .stroke(Stroke::new(1.0, t.border))
-                .corner_radius(CornerRadius::same(12))
-                .inner_margin(egui::Margin::same(14))
-                .show(ui, |ui| {
-                    ui.set_width(ui.available_width());
-                    ui.label(egui::RichText::new(tl!("Based on PdfCraft")).font(theme::semibold(15.0)));
-                    ui.label(
-                        egui::RichText::new(tl!("KNUPDF is built on PdfCraft, an open-source PDF application (MIT OR Apache-2.0)."))
-                            .color(t.text_muted),
-                    );
-                    ui.add_space(8.0);
-                    if let Some(cmd) = widgets::community_links(ui) {
-                        app.execute(cmd);
-                    }
-                });
-            ui.add_space(22.0);
 
             egui::Frame::NONE
                 .fill(t.card)

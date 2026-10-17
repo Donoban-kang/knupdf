@@ -182,7 +182,7 @@ impl PdfCraftApp {
             .iter()
             .map(|p| {
                 let path = std::path::Path::new(p);
-                let bytes = std::fs::read(path).map_err(|e| format!("Couldn't read {}: {e}", path.display()))?;
+                let bytes = std::fs::read(path).map_err(|e| crate::i18n::fmt(tl!("Couldn't read {name}: {e}"), &[("name", &path.display().to_string()), ("e", &e.to_string())]))?;
                 let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
                 Ok((name, bytes))
             })

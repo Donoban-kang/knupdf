@@ -5,7 +5,7 @@ NanumGothicEco, Naver NanumMyeongjoEco, NanumMyeongjoEco, Naver NanumGothicLight
 NanumBarunGothic, Naver NanumBarunGothic
 
 KnupdfHangul.ttf is a Modified Version (a Hangul subset) of NanumGothic, renamed
-"KNUPDF Hangul" as the licence requires.
+"KnuPdf Hangul" as the licence requires.
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
 

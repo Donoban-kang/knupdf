@@ -328,11 +328,11 @@ fn dialogs(app: &mut PdfCraftApp, ctx: &egui::Context) {
                                     detail.push_str(&format!(" · {e}"));
                                 }
                                 detail.push_str(if f.subset {
-                                    " · Embedded subset"
+                                    tl!(" · Embedded subset")
                                 } else if f.embedded {
-                                    " · Embedded"
+                                    tl!(" · Embedded")
                                 } else {
-                                    " · Not embedded (substituted)"
+                                    tl!(" · Not embedded (substituted)")
                                 });
                                 row(ui, &f.name, detail);
                             }
@@ -1154,15 +1154,16 @@ fn dialogs(app: &mut PdfCraftApp, ctx: &egui::Context) {
                     _ => {
                         ui.horizontal(|ui| {
                             ui.vertical(|ui| {
-                                ui.label(egui::RichText::new("KNUPDF").font(theme::semibold(20.0)));
+                                ui.label(egui::RichText::new("KnuPdf").font(theme::semibold(20.0)));
                                 ui.label(crate::i18n::fmt(tl!("Version {v}"), &[("v", &pdfcraft_engine::build_info::version())]));
                             });
                         });
                         ui.add_space(6.0);
                         ui.label(tl!("A clean-room, open-source PDF application written in Rust. MIT OR Apache-2.0."));
+                        ui.label(egui::RichText::new(tl!("Based on PdfCraft")).color(t.text_muted));
                         ui.label(
                             egui::RichText::new(
-                                tl!("Rendering: hayro (bootstrap) · UI: egui · Icons: Lucide (ISC) · Fonts: Inter, JetBrains Mono, Dancing Script, KNUPDF Hangul (OFL)"),
+                                tl!("Rendering: hayro (bootstrap) · UI: egui · Icons: Lucide (ISC) · Fonts: Inter, JetBrains Mono, Dancing Script, KnuPdf Hangul (OFL)"),
                             )
                             .color(t.text_muted)
                             .small(),

@@ -150,7 +150,7 @@ fn plural_sl(n: u64) -> usize {
 pub static LANGUAGES: [LangInfo; 24] = [
     LangInfo { code: "en", name: "English", source: "", plural: plural_one_other, rtl: false, catalog: OnceLock::new() },
     LangInfo { code: "ja", name: "日本語", source: include_str!("ja.tsv"), plural: plural_none, rtl: false, catalog: OnceLock::new() },
-    // Korean (KNUPDF); every `ko-*` locale (`ko-KR`, `ko_KR.UTF-8`) resolves here. One plural form.
+    // Korean (KnuPdf); every `ko-*` locale (`ko-KR`, `ko_KR.UTF-8`) resolves here. One plural form.
     LangInfo { code: "ko", name: "한국어", source: include_str!("ko.tsv"), plural: plural_none, rtl: false, catalog: OnceLock::new() },
     // Simplified Chinese; `zh`, `zh-CN`, `zh-SG` and `zh-Hans-*` locales resolve here (see `candidates`).
     LangInfo {
@@ -462,6 +462,9 @@ pub fn tr_id<'a>(lang: Lang, id: &str, label: &'a str) -> &'a str {
     lang.catalog().id(id).unwrap_or_else(|| tr(lang, label))
 }
 
+/// Placeholder names whose value is a whole message (an error, a reason) worth looking up.
+const ERROR_ARGS: &[&str] = &["e", "error", "why", "reason", "msg", "m"];
+
 /// Fill `{name}` placeholders in one pass. Unknown placeholders are left as written, and inserted
 /// values are never read as templates again, so a file name containing `{n}` stays intact.
 pub fn fmt(template: &str, args: &[(&str, &str)]) -> String {
@@ -475,6 +478,9 @@ pub fn fmt(template: &str, args: &[(&str, &str)]) -> String {
             return out;
         };
         match args.iter().find(|(key, _)| *key == name) {
+            // KnuPdf: an error or reason inserted whole (`{e}`) is looked up too, so the engine's
+            // fixed messages show in the interface language when the catalog has them.
+            Some((key, value)) if ERROR_ARGS.contains(key) => out.push_str(t(value)),
             Some((_, value)) => out.push_str(value),
             None => {
                 out.push('{');
@@ -2169,6 +2175,77 @@ mod tests {
         assert!(literals.contains("@{login}: {prs} PRs, {commits} commits, +{added} / −{deleted} lines (Δ {delta}), +{bin_added} / −{bin_deleted} binary assets, {first} – {last}"), "multiline literal arguments are included");
         let missing: Vec<_> = literals.iter().filter(|label| !has(lt, label)).collect();
         assert!(missing.is_empty(), "Untranslated Lithuanian UI labels: {missing:#?}");
+    }
+
+    /// KnuPdf: an engine message inserted as `{e}` shows translated; other values stay as written.
+    #[test]
+    fn korean_fmt_translates_inserted_errors_only() {
+        set_current(Lang::from_code("ko").expect("ko registered"));
+        let shown = fmt(t("Couldn't add {name}: {e}"), &[("name", "the password is wrong"), ("e", "the password is wrong")]);
+        set_current(Lang::EN);
+        assert_eq!(shown, "the password is wrong을(를) 추가하지 못했습니다: 암호가 틀렸습니다");
+    }
+
+    /// KnuPdf: Korean covers every command, menu and All tools label, every UI literal (direct
+    /// lookups and multiline arguments too), the credits labels, and every key another bundled
+    /// catalog translates. `KO_MISSING=<file>` writes the gaps as `context<TAB>source` lines.
+    #[test]
+    fn korean_covers_everything() {
+        let ko = Lang::from_code("ko").expect("ko registered");
+        let mut missing: std::collections::BTreeSet<(String, String)> = std::collections::BTreeSet::new();
+        let mut plain = |s: &str| {
+            if !has(ko, s) {
+                missing.insert((String::new(), s.to_string()));
+            }
+        };
+        for command in pdfcraft_engine::commands::COMMANDS {
+            plain(command.label);
+            if let Some(menu) = command.menu {
+                plain(menu);
+            }
+        }
+        for group in pdfcraft_engine::catalog::TOOL_GROUPS {
+            plain(group.label);
+            for section in group.sections {
+                plain(section.title);
+                for item in section.items {
+                    plain(item.label);
+                }
+            }
+        }
+        for literal in scan_ui_literals(true) {
+            plain(&literal);
+        }
+        let credits = crate::credits::NameMode::ALL
+            .iter()
+            .map(|mode| mode.label())
+            .chain(crate::credits::SortKey::ALL.iter().flat_map(|key| {
+                let (menu, heading) = key.label();
+                [menu, heading]
+            }))
+            .chain(crate::credits::MODEL_COLUMNS.iter().copied());
+        for label in credits {
+            plain(label);
+        }
+        for reference in LANGUAGES.iter().filter(|language| language.code != "ko") {
+            let (entries, _) = catalog::parse_entries(reference.source, reference.plural_forms());
+            for entry in entries {
+                let translated = match entry.context.as_str() {
+                    "" => ko.catalog().plain(&entry.source),
+                    "@id" => ko.catalog().id(&entry.source),
+                    "@plural" => entry.source.split_once('|').and_then(|(one, other)| ko.catalog().plural(one, other, 0)),
+                    context => ko.catalog().contextual(context, &entry.source),
+                };
+                if translated.is_none() {
+                    missing.insert((entry.context, entry.source));
+                }
+            }
+        }
+        if let Some(path) = std::env::var_os("KO_MISSING") {
+            let text: String = missing.iter().map(|(c, s)| format!("{c}\t{}\n", s.replace('\\', "\\\\").replace('\n', "\\n").replace('\t', "\\t"))).collect();
+            std::fs::write(path, text).expect("write KO_MISSING");
+        }
+        assert!(missing.is_empty(), "Korean misses {} keys: {missing:#?}", missing.len());
     }
 
     #[test]

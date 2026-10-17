@@ -113,7 +113,7 @@ fn write_clipboard_file(dir: &std::path::Path, name: &str, bytes: &[u8]) -> Resu
     std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
     let meta = std::fs::symlink_metadata(dir).map_err(|e| e.to_string())?;
     if !meta.is_dir() {
-        return Err(format!("{} is not a folder", dir.display()));
+        return Err(crate::i18n::fmt(tl!("{name} is not a folder"), &[("name", &dir.display().to_string())]));
     }
     #[cfg(unix)]
     {

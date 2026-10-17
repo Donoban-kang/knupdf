@@ -350,7 +350,7 @@ fn stamp_palette(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens) {
                     let shown = crate::widgets::fit_line(kind.label(), (chip.width() - 10.0).max(0.0), |s| crate::widgets::text_width(ui, s, &font));
                     ui.painter().with_clip_rect(chip.shrink(3.0)).text(egui::pos2(chip.center().x, y), Align2::CENTER_CENTER, shown, font, col);
                     if group == StampGroup::Dynamic {
-                        let by = "By name at time, date";
+                        let by = tl!("By name at time, date");
                         let by_font = theme::regular(7.5);
                         let by_shown = crate::widgets::fit_line(by, (chip.width() - 8.0).max(0.0), |s| crate::widgets::text_width(ui, s, &by_font));
                         ui.painter().with_clip_rect(chip.shrink(2.0)).text(

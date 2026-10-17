@@ -915,7 +915,7 @@ impl PdfCraftApp {
             scroll_speed: scroll_speed::ScrollSpeed::default(),
             animation_effects: motion::AnimationEffects::default(),
             motion: motion::Motion::default(),
-            // KNUPDF opens in Korean; Preferences can switch to Auto or another language.
+            // KnuPdf opens in Korean; Preferences can switch to Auto or another language.
             language: "ko".to_string(),
             ui_scale: None,
             system_text_scale: 1.0,
@@ -1985,10 +1985,11 @@ impl PdfCraftApp {
         self.notify(tl!(text).to_string());
     }
 
-    /// Notify with an error's own text. Engine and OS messages are not translated: matching their
-    /// English wording would break silently whenever it changes.
+    /// Notify with an error's own text, translated when the catalog has that exact message.
     pub fn notify_error(&mut self, error: impl std::fmt::Display) {
-        self.notify(error.to_string());
+        // KnuPdf: fixed messages the catalog knows show translated; anything else stays as is.
+        let text = error.to_string();
+        self.notify(tl!(&text).to_string());
     }
 
     /// Notify with a `{name}`-style template in the UI language (placeholders filled once).
