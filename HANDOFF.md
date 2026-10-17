@@ -45,6 +45,7 @@
 | `packaging/windows-knupdf/` | NSIS 설치 스크립트, 라이선스 안내문, Linux용 빌드 스크립트 |
 | `packaging/web-artifact/` | 웹판을 Artifact로 올리기 위한 로더 페이지와 패키징 스크립트 |
 | `README.md`, `KnuPdf-PRD.md`, `HANDOFF.md` | 문서 |
+| `docs/manual/` | 쉬운 사용 설명서(`README.md`는 GitHub용, `index.html`은 꾸민 페이지, `images/`는 번호 표시한 화면). 화면이 바뀌면 그림도 다시 찍어야 함 |
 
 실행 파일 이름(`pdfcraft.exe`), crate 이름(`pdfcraft-*`), 설정 폴더 이름(`%APPDATA%\PdfCraft`, `PdfCraftData`)은
 원본 갱신을 받기 쉽도록 **일부러 그대로** 두었습니다. 설치할 때 exe만 `KnuPdf.exe`로 바꿔 넣습니다.

@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KnuPdf 쉬운 사용 설명서</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+  /* Layout: one friendly reading column; each mission is a card with big numbered steps and a marked screenshot. */
+  :root {
+    --bg: #f3f7fd; --paper: #ffffff; --ink: #0b1f3f; --text: #22303f; --muted: #5d6b7c; --line: #dde5f0;
+    --blue: #0a4a9f; --blue-soft: #e6effb; --sun: #ffc93c; --sun-soft: #fff4d6; --red: #d63a47; --red-soft: #fde8ea; --green: #1f7a4d; --green-soft: #e3f4ea;
+    --round: 'Jua', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+    --body: 'Noto Sans KR', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #0e1520; --paper: #172131; --ink: #eef3fb; --text: #d8e0ea; --muted: #9eabbb; --line: #2b3a50;
+    --blue: #7db0f2; --blue-soft: #1a2c46; --sun: #ffd35c; --sun-soft: #3a3016; --red: #ff8a94; --red-soft: #3c1f24; --green: #74d3a3; --green-soft: #173327; color-scheme: dark } }
+  :root[data-theme="dark"] {
+    --bg: #0e1520; --paper: #172131; --ink: #eef3fb; --text: #d8e0ea; --muted: #9eabbb; --line: #2b3a50;
+    --blue: #7db0f2; --blue-soft: #1a2c46; --sun: #ffd35c; --sun-soft: #3a3016; --red: #ff8a94; --red-soft: #3c1f24; --green: #74d3a3; --green-soft: #173327; color-scheme: dark }
+
+  body { background: var(--bg); color: var(--text); font-family: var(--body); font-size: 17px; line-height: 1.75; }
+  .wrap { max-width: 900px; margin: 0 auto; padding-block: 32px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+  h1, h2, h3 { font-family: var(--round); font-weight: 400; color: var(--ink); margin: 0; text-wrap: balance; letter-spacing: 0; }
+  h1 { font-size: 40px; line-height: 1.25; }
+  h2 { font-size: 28px; line-height: 1.3; }
+  h3 { font-size: 21px; }
+  p { margin: 0; max-width: 62ch; }
+  a { color: var(--blue); font-weight: 500; }
+  a:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; border-radius: 6px; }
+  b.btn { display: inline-block; font-weight: 700; color: var(--blue); background: var(--blue-soft); border: 1px solid var(--line); border-radius: 8px; padding: 0 8px; line-height: 1.6; white-space: nowrap; }
+  kbd { font-family: var(--body); font-weight: 700; font-size: 15px; border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 6px; padding: 0 7px; background: var(--paper); color: var(--ink); }
+
+  .hero { display: grid; grid-template-columns: auto 1fr; gap: 22px; align-items: center; background: var(--paper); border-radius: 22px; padding: 26px; border: 2px solid var(--line); }
+  .hero img { width: 104px; height: 104px; }
+  .hero p { color: var(--muted); margin-top: 6px; }
+
+  .toc { display: flex; flex-wrap: wrap; gap: 10px; }
+  .toc a { text-decoration: none; background: var(--paper); border: 2px solid var(--line); border-radius: 999px; padding: 6px 14px; font-size: 15px; color: var(--ink); }
+  .toc a span { font-family: var(--round); color: var(--blue); margin-right: 6px; }
+
+  .mission { background: var(--paper); border-radius: 22px; border: 2px solid var(--line); padding: 26px; display: grid; gap: 18px; scroll-margin-top: 16px; }
+  .mission-head { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; }
+  .badge { font-family: var(--round); font-size: 15px; color: var(--ink); background: var(--sun); border-radius: 12px; padding: 6px 12px; white-space: nowrap; }
+  .goal { color: var(--muted); }
+
+  ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; counter-reset: s; }
+  ol.steps li { display: grid; grid-template-columns: 38px 1fr; gap: 12px; align-items: start; counter-increment: s; }
+  ol.steps li::before { content: counter(s); font-family: var(--round); font-size: 20px; width: 34px; height: 34px; border-radius: 50%; background: var(--red); color: #ffffff; display: grid; place-items: center; }
+  ol.steps li > div { min-width: 0; padding-top: 2px; }
+
+  figure { margin: 0; display: grid; gap: 8px; }
+  figure img { width: 100%; height: auto; display: block; border-radius: 14px; border: 2px solid var(--line); background: var(--paper); }
+  figcaption { font-size: 14.5px; color: var(--muted); }
+
+  .note { border-radius: 14px; padding: 14px 18px; display: grid; gap: 4px; }
+  .note strong { font-family: var(--round); font-weight: 400; font-size: 18px; }
+  .note.tip { background: var(--green-soft); }
+  .note.tip strong { color: var(--green); }
+  .note.warn { background: var(--red-soft); }
+  .note.warn strong { color: var(--red); }
+  .note.sun { background: var(--sun-soft); }
+  .note.sun strong { color: var(--ink); }
+
+  .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .faq { display: grid; gap: 10px; }
+  details { background: var(--blue-soft); border-radius: 14px; padding: 12px 18px; }
+  summary { cursor: pointer; font-weight: 700; color: var(--ink); }
+  summary:focus-visible { outline: 3px solid var(--sun); outline-offset: 4px; border-radius: 6px; }
+  details p { margin-top: 8px; }
+
+  @media (max-width: 640px) {
+    body { font-size: 16px; }
+    h1 { font-size: 31px; }
+    h2 { font-size: 24px; }
+    .hero { grid-template-columns: 1fr; }
+    .hero img { width: 84px; height: 84px; }
+    .mission, .hero { padding: 18px; }
+    .pair { grid-template-columns: 1fr; }
+    .mission-head { grid-template-columns: 1fr; gap: 6px; }
+    .mission-head .badge { justify-self: start; }
+  }
+</style>
+<style>body{margin:0}</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="hero">
+    <img src="images/icon.png" alt="KnuPdf 아이콘. 파란 네모 안에 흰색 K가 있어요.">
+    <div>
+      <h1>KnuPdf 쉬운 사용 설명서</h1>
+      <p>PDF를 열고, 보고, 고치고, 지키는 방법을 하나씩 따라 해 봐요. 그림 속 <b style="color:var(--red)">빨간 동그라미 번호</b> 순서대로 누르면 돼요.</p>
+    </div>
+  </header>
+
+  <section class="mission" aria-labelledby="what">
+    <h2 id="what">KnuPdf가 뭐예요?</h2>
+    <p><b>PDF</b>는 종이 문서를 컴퓨터 안에 그대로 담은 파일이에요. 학교 가정통신문, 안내문, 신청서가 PDF로 많이 와요.</p>
+    <p><b>KnuPdf</b>는 이 PDF를 열어 보고, 페이지를 돌리거나 합치고, 비밀번호를 걸고, 개인정보를 지울 수 있는 프로그램이에요. 인터넷에 파일을 보내지 않고 <b>내 컴퓨터 안에서만</b> 일해서 안전해요.</p>
+    <div class="note sun"><strong>준비물</strong><p>Windows 10 또는 11 컴퓨터 · KnuPdf 설치 파일(<code>KnuPdf-0.8.0-windows-x64-setup.exe</code>) · 연습할 PDF 파일 한 개</p></div>
+  </section>
+
+  <nav class="toc" aria-label="미션 목록">
+    <a href="#m1"><span>1</span>설치하기</a>
+    <a href="#m2"><span>2</span>PDF 열기</a>
+    <a href="#m3"><span>3</span>크게 보고 넘기기</a>
+    <a href="#m4"><span>4</span>페이지 돌리기·지우기</a>
+    <a href="#m5"><span>5</span>PDF 합치기</a>
+    <a href="#m6"><span>6</span>비밀번호 걸기</a>
+    <a href="#m7"><span>7</span>개인정보 지우기</a>
+    <a href="#m8"><span>8</span>저장하기</a>
+    <a href="#help"><span>?</span>도움이 필요해요</a>
+  </nav>
+
+  <section class="mission" id="m1" aria-labelledby="m1h">
+    <div class="mission-head"><span class="badge">미션 1</span><h2 id="m1h">컴퓨터에 설치하기</h2></div>
+    <p class="goal">한 번만 하면 돼요. 처음이라면 어른과 함께 해요.</p>
+    <ol class="steps">
+      <li><div><b>KnuPdf-0.8.0-windows-x64-setup.exe</b> 파일을 마우스로 <b>두 번 딸깍</b> 눌러요.</div></li>
+      <li><div>파란 창에 "Windows의 PC 보호"가 나오면 <b class="btn">추가 정보</b>를 누르고, 아래에 생기는 <b class="btn">실행</b>을 눌러요.</div></li>
+      <li><div>"이 앱이 디바이스를 변경하도록 허용하시겠어요?"가 나오면 <b class="btn">예</b>를 눌러요.</div></li>
+      <li><div>설치 창에서 <b class="btn">다음</b>을 계속 누르고, 마지막에 <b class="btn">설치</b>, 그다음 <b class="btn">마침</b>을 눌러요.</div></li>
+      <li><div>바탕 화면에 <b>파란 네모 K</b> 아이콘이 생기면 성공이에요.</div></li>
+    </ol>
+    <div class="note tip"><strong>왜 파란 경고 창이 나와요?</strong><p>KnuPdf는 새로 만든 프로그램이라 Windows가 아직 잘 몰라서 조심하라고 알려 주는 거예요. 학교나 회사 컴퓨터라면 컴퓨터 담당 선생님께 먼저 여쭤봐요.</p></div>
+  </section>
+
+  <section class="mission" id="m2" aria-labelledby="m2h">
+    <div class="mission-head"><span class="badge">미션 2</span><h2 id="m2h">KnuPdf 켜고 PDF 열기</h2></div>
+    <ol class="steps">
+      <li><div>바탕 화면의 <b>K 아이콘</b>을 두 번 눌러 KnuPdf를 켜요.</div></li>
+      <li><div>가운데 <b class="btn">파일 열기</b>(그림의 1번)나, 맨 위 <b class="btn">+ 열기</b>(2번)를 눌러요.</div></li>
+      <li><div>열고 싶은 PDF를 골라 <b class="btn">열기</b>를 눌러요.</div></li>
+    </ol>
+    <figure>
+      <img src="images/home.webp" alt="KnuPdf 첫 화면. 1번은 가운데 파일 열기 카드, 2번은 왼쪽 위 열기 버튼에 표시되어 있어요." width="1200" height="746" loading="lazy">
+      <figcaption>KnuPdf 첫 화면. 왼쪽에는 쓸 수 있는 도구가 줄지어 있어요.</figcaption>
+    </figure>
+    <div class="note tip"><strong>더 쉬운 방법</strong><p>PDF 파일을 마우스로 꾹 눌러 KnuPdf 창 위로 <b>끌어다 놓아도</b> 열려요. 한 번 연 파일은 첫 화면 "최근 파일"에 남아서 다음에 바로 열 수 있어요.</p></div>
+  </section>
+
+  <section class="mission" id="m3" aria-labelledby="m3h">
+    <div class="mission-head"><span class="badge">미션 3</span><h2 id="m3h">크게 보고, 페이지 넘기기</h2></div>
+    <ol class="steps">
+      <li><div>오른쪽의 <b>위·아래 화살표</b>(그림의 2번)를 누르면 앞 페이지, 다음 페이지로 가요.</div></li>
+      <li><div><b>돋보기</b>(3번)를 누르면 글자가 크게 보여요. <kbd>Ctrl</kbd>을 누른 채 마우스 휠을 굴려도 돼요.</div></li>
+      <li><div>1번 <b>저장</b> 단추는 미션 8에서 써요.</div></li>
+    </ol>
+    <figure>
+      <img src="images/opened.webp" alt="PDF를 연 화면. 오른쪽 위 저장 단추가 1번, 오른쪽 페이지 넘기기 화살표가 2번, 오른쪽 아래 돋보기가 3번이에요." width="1200" height="746" loading="lazy">
+      <figcaption>PDF를 연 모습. 가운데에 문서가 보여요.</figcaption>
+    </figure>
+  </section>
+
+  <section class="mission" id="m4" aria-labelledby="m4h">
+    <div class="mission-head"><span class="badge">미션 4</span><h2 id="m4h">페이지 돌리기·지우기</h2></div>
+    <p class="goal">옆으로 누운 페이지를 바로 세우거나, 필요 없는 페이지를 뺄 때 써요.</p>
+    <ol class="steps">
+      <li><div>왼쪽 도구 목록에서 <b class="btn">페이지 구성</b>을 눌러요.</div></li>
+      <li><div>위쪽 단추(그림의 1번)로 고른 페이지를 <b>왼쪽·오른쪽으로 돌리거나</b> <b>휴지통</b>으로 지워요.</div></li>
+      <li><div>가운데 페이지 그림(2번) 아래의 작은 단추로도 한 장씩 돌리고 지울 수 있어요.</div></li>
+    </ol>
+    <figure>
+      <img src="images/pages.webp" alt="페이지 구성 화면. 왼쪽 위 돌리기·지우기 단추 줄이 1번, 가운데 페이지 그림이 2번이에요." width="1200" height="746" loading="lazy">
+    </figure>
+    <div class="note tip"><strong>실수했어요!</strong><p>괜찮아요. <kbd>Ctrl</kbd> + <kbd>Z</kbd>를 누르면 방금 한 일이 취소돼요.</p></div>
+  </section>
+
+  <section class="mission" id="m5" aria-labelledby="m5h">
+    <div class="mission-head"><span class="badge">미션 5</span><h2 id="m5h">여러 PDF를 하나로 합치기</h2></div>
+    <ol class="steps">
+      <li><div>왼쪽 도구 목록에서 <b class="btn">파일 합치기</b>를 누르고, <b class="btn">합칠 파일 추가</b>를 눌러요.</div></li>
+      <li><div><b class="btn">파일 추가…</b>(그림의 1번)를 눌러 합칠 PDF들을 골라요. 파일을 이 칸에 끌어다 놓아도 돼요.</div></li>
+      <li><div>파일 순서를 마우스로 끌어서 바꿔요. 위에 있는 파일이 앞쪽 페이지가 돼요.</div></li>
+      <li><div>오른쪽 위 <b class="btn">합치기</b>(2번)를 누르면 새 PDF 하나가 만들어져요.</div></li>
+    </ol>
+    <figure>
+      <img src="images/combine.webp" alt="파일 합치기 화면. 가운데 파일 추가 단추가 1번, 오른쪽 위 합치기 단추가 2번이에요." width="1200" height="746" loading="lazy">
+    </figure>
+  </section>
+
+  <section class="mission" id="m6" aria-labelledby="m6h">
+    <div class="mission-head"><span class="badge">미션 6</span><h2 id="m6h">비밀번호 걸기</h2></div>
+    <p class="goal">비밀번호를 아는 사람만 PDF를 열 수 있게 해요.</p>
+    <ol class="steps">
+      <li><div>왼쪽 도구 목록에서 <b class="btn">PDF 보호</b>를 누르고, <b class="btn">암호로 보호</b>(그림의 1번)를 눌러요.</div></li>
+      <li><div>"보기"가 골라진 채로, <b>암호 입력</b>과 <b>암호 다시 입력</b> 칸(2번)에 같은 비밀번호를 두 번 써요.</div></li>
+      <li><div><b class="btn">적용</b>(3번)을 누르고, 꼭 <b>저장</b>(미션 8)까지 해요. 저장해야 비밀번호가 걸려요.</div></li>
+    </ol>
+    <figure>
+      <img src="images/protect.webp" alt="암호로 보호 창. 왼쪽 암호로 보호 메뉴가 1번, 암호 입력 칸 두 개가 2번, 적용 단추가 3번이에요." width="1200" height="746" loading="lazy">
+    </figure>
+    <div class="note warn"><strong>꼭 기억해요</strong><p>비밀번호를 잊어버리면 아무도 그 PDF를 열 수 없어요. 비밀번호는 안전한 곳에 적어 두고, 다른 친구에게 알려 주지 않아요.</p></div>
+  </section>
+
+  <section class="mission" id="m7" aria-labelledby="m7h">
+    <div class="mission-head"><span class="badge">미션 7</span><h2 id="m7h">개인정보 한 번에 지우기</h2></div>
+    <p class="goal">주민등록번호, 전화번호, 계좌번호, 이메일처럼 남이 보면 안 되는 정보를 찾아서 <b>검은 상자로 완전히</b> 지워요.</p>
+    <ol class="steps">
+      <li><div>왼쪽 도구 목록에서 <b class="btn">PDF 가리기</b>를 누르고 <b class="btn">텍스트 찾아 가리기</b>를 눌러요.</div></li>
+      <li><div>창이 뜨면 <b class="btn">패턴</b>(그림의 1번)을 고르고, 목록(2번)에서 <b>한국 개인정보 전체</b>를 그대로 둬요. 주민등록번호만, 전화번호만처럼 하나만 고를 수도 있어요.</div></li>
+      <li><div><b class="btn">모두 표시</b>를 누르면 찾은 곳에 <b>빨간 테두리</b>가 생겨요. 아직 지워지지 않았으니 잘 찾았는지 눈으로 확인해요.</div></li>
+      <li><div>왼쪽 아래 <b class="btn">모두 가리기</b>를 누르고, 확인 창에서 <b class="btn">적용</b>을 눌러요. 빨간 테두리가 <b>검은 상자</b>로 바뀌면 지워진 거예요.</div></li>
+      <li><div><b>다른 이름으로 저장</b>(미션 8)해요.</div></li>
+    </ol>
+    <figure>
+      <img src="images/redact1.webp" alt="텍스트 찾아 가리기 창. 패턴 고르기가 1번, 한국 개인정보 전체 목록이 2번이에요." width="1200" height="746" loading="lazy">
+      <figcaption>패턴 목록: 한국 개인정보 전체, 주민등록번호·외국인등록번호, 전화번호, 사업자등록번호, 계좌번호, 여권번호, 운전면허번호</figcaption>
+    </figure>
+    <div class="pair">
+      <figure>
+        <img src="images/redact2.webp" alt="찾은 개인정보 12곳에 빨간 테두리가 있고, 왼쪽 아래 모두 가리기 단추가 1번이에요." width="1200" height="746" loading="lazy">
+        <figcaption>찾은 곳: 빨간 테두리. 1번 <b>모두 가리기</b>를 눌러요.</figcaption>
+      </figure>
+      <figure>
+        <img src="images/redact3.webp" alt="개인정보가 모두 검은 상자로 지워지고 품명과 금액만 남은 문서" width="1200" height="746" loading="lazy">
+        <figcaption>다 지운 모습: 검은 상자. 품명·금액은 그대로예요.</figcaption>
+      </figure>
+    </div>
+    <div class="note warn"><strong>되돌릴 수 없어요</strong><p>적용하고 저장하면 지운 글자는 다시 살릴 수 없어요. 그래서 원래 파일은 그대로 두고, <b>다른 이름으로 저장</b>해서 새 파일을 만들어요.</p></div>
+    <div class="note sun"><strong>사진 속 글자는 못 찾아요</strong><p>종이를 스캔한 사진 같은 PDF는 글자가 그림이라 찾지 못해요. 그럴 때는 <b class="btn">텍스트 및 이미지 가리기</b>로 지울 곳을 마우스로 직접 네모나게 그려요.</p></div>
+  </section>
+
+  <section class="mission" id="m8" aria-labelledby="m8h">
+    <div class="mission-head"><span class="badge">미션 8</span><h2 id="m8h">저장하기</h2></div>
+    <ol class="steps">
+      <li><div>지금 파일에 그대로 저장하려면 오른쪽 위 <b>저장 단추</b>(미션 3 그림의 1번)를 누르거나 <kbd>Ctrl</kbd> + <kbd>S</kbd>를 눌러요.</div></li>
+      <li><div>새 파일로 따로 저장하려면 <b class="btn">메뉴</b> → <b class="btn">파일</b> → <b class="btn">다른 이름으로 저장…</b>(또는 <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd>)을 눌러 새 이름을 써요.</div></li>
+      <li><div>탭 이름 옆에 <b>까만 점</b>이 있으면 아직 저장하지 않은 거예요. 저장하면 점이 사라져요.</div></li>
+    </ol>
+  </section>
+
+  <section class="mission" id="help" aria-labelledby="helph">
+    <div class="mission-head"><span class="badge">도움말</span><h2 id="helph">이럴 땐 어떻게 해요?</h2></div>
+    <div class="faq">
+      <details><summary>화면 글자가 영어로 나와요.</summary><p><b class="btn">메뉴</b> → <b class="btn">편집</b> → <b class="btn">환경설정…</b>(또는 <kbd>Ctrl</kbd> + <kbd>,</kbd>)을 열고 <b>표시 언어</b>를 <b>한국어</b>로 골라요.</p></details>
+      <details><summary>방금 한 걸 취소하고 싶어요.</summary><p><kbd>Ctrl</kbd> + <kbd>Z</kbd>를 눌러요. 다시 하고 싶으면 <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd>예요.</p></details>
+      <details><summary>도구를 못 찾겠어요.</summary><p>맨 위 <b>도구 및 명령 찾기</b> 칸(<kbd>Ctrl</kbd> + <kbd>K</kbd>)에 "회전", "합치기", "암호"처럼 하고 싶은 일을 써 보세요.</p></details>
+      <details><summary>설치하지 않고 쓸 수 있나요?</summary><p>네. 인터넷 브라우저에서 쓰는 <a href="https://claude.ai/artifact/CzyCoaMnWXithtxtsuF2hq" target="_blank" rel="noopener">KnuPdf 웹판</a>이 있어요. 이것도 파일을 내 브라우저 안에서만 다뤄요. 설치 없이 쓰는 휴대용 zip도 있어요(압축을 풀고 <b>KnuPdf.exe</b>를 실행).</p></details>
+      <details><summary>프로그램 버전과 만든 사람이 궁금해요.</summary><p><b class="btn">메뉴</b> → <b class="btn">도움말</b> → <b class="btn">KnuPdf 정보</b>를 눌러요.</p>
+        <figure style="margin-top:10px"><img src="images/about.webp" alt="KnuPdf 정보 창. 버전 0.8.0, 만든이 강돈호" width="900" height="420" loading="lazy"></figure></details>
+    </div>
+    <div class="note sun"><strong>우리의 약속</strong><p>다른 사람의 이름, 주민등록번호, 전화번호는 그 사람의 소중한 비밀이에요. 친구나 가족의 정보가 담긴 PDF를 다른 사람에게 보낼 때는 먼저 미션 7로 지우고 보내요.</p></div>
+  </section>
+</div>
+</body>
+</html>
