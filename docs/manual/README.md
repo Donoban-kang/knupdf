@@ -15,7 +15,10 @@ PDF를 열고, 보고, 고치고, 지키는 방법을 하나씩 따라 해 봐�
 **KnuPdf**는 이 PDF를 열어 보고, 페이지를 돌리거나 합치고, 비밀번호를 걸고, 개인정보를 지울 수 있는 프로그램이에요.
 인터넷에 파일을 보내지 않고 **내 컴퓨터 안에서만** 일해서 안전해요.
 
-**준비물**: Windows 10 또는 11 컴퓨터 · KnuPdf 설치 파일(`KnuPdf-0.8.0-windows-x64-setup.exe`) · 연습할 PDF 파일 한 개
+**준비물**: Windows 10 또는 11 컴퓨터 · KnuPdf 설치 파일 · 연습할 PDF 파일 한 개
+
+> **설치 파일 받기**: [⬇ KnuPdf-0.8.0-windows-x64-setup.exe (28 MB)](https://github.com/Donoban-kang/knupdf/raw/main/downloads/KnuPdf-0.8.0-windows-x64-setup.exe)  
+> 받은 파일은 보통 컴퓨터의 **다운로드** 폴더에 있어요.
 
 **미션 목록**
 1. [설치하기](#미션-1-컴퓨터에-설치하기)

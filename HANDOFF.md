@@ -15,7 +15,7 @@
 | 한국어 화면 | 완료. 번역 누락 0(테스트로 확인) |
 | 이름·아이콘·정보 창 | 완료. KnuPdf, K 타일 아이콘, "만든이: 강돈호" |
 | Windows 설치 파일·휴대용 zip | 빌드 완료. **실제 Windows에서는 아직 미시험**(Wine에서 실행·창 제목·정보 창만 확인) |
-| GitHub Releases | **미등록**. 아래 6절 순서대로 직접 올려야 함 |
+| 내려받기 | `downloads/`에 설치 파일·zip을 커밋해 README에서 바로 받게 함(임시). GitHub Releases는 **미등록**(6절). Releases에 올린 뒤에는 `downloads/`의 파일을 지우고 링크를 Releases로 바꾸는 것을 권장 |
 | 웹판 | claude.ai Artifact로 비공개 게시: https://claude.ai/artifact/CzyCoaMnWXithtxtsuF2hq |
 | 한국 개인정보 가리기 | 완료. PDF 가리기 → 텍스트 찾아 가리기 → 패턴 → "한국 개인정보 전체"(기본값) 또는 항목별 |
 | 다음 할 일 | 9절 |
