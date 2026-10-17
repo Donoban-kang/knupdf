@@ -2242,7 +2242,8 @@ mod tests {
             }
         }
         if let Some(path) = std::env::var_os("KO_MISSING") {
-            let text: String = missing.iter().map(|(c, s)| format!("{c}\t{}\n", s.replace('\\', "\\\\").replace('\n', "\\n").replace('\t', "\\t"))).collect();
+            let text: String =
+                missing.iter().map(|(c, s)| format!("{c}\t{}\n", s.replace('\\', "\\\\").replace('\n', "\\n").replace('\t', "\\t"))).collect();
             std::fs::write(path, text).expect("write KO_MISSING");
         }
         assert!(missing.is_empty(), "Korean misses {} keys: {missing:#?}", missing.len());

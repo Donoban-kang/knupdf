@@ -832,7 +832,7 @@ impl PdfCraftApp {
     }
 
     /// Export all comments / form data: the format follows the file name's extension.
-    /// Export a PDF ▸ Word, HTML or RTF: ask where (`save_override` in tests), then write.
+    /// Export a PDF ▸ Word, PowerPoint, Hangul, HTML or RTF: ask where (`save_override` in tests), then write.
     pub fn export_office_dialog(&mut self, format: pdfcraft_engine::compare::OfficeFormat) {
         // What's typed in a form field is part of the document (#166).
         if !self.commit_form_typing() {

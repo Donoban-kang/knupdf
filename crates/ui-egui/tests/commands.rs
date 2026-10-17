@@ -62,6 +62,7 @@ const PICKERS: &[&str] = &[
     "ocr.recognize_batch",
     "form.merge_data",
     "export.docx",
+    "export.hwpx",
     "export.pptx",
     "export.html",
     "export.rtf",
@@ -72,7 +73,8 @@ const PICKERS: &[&str] = &[
 fn every_registered_command_is_implemented() {
     for spec in COMMANDS {
         // Page-text Copy needs a loaded view and egui context, covered by ui_group::text_select.
-        if PICKERS.contains(&spec.id) || spec.id == "edit.copy" {
+        // KnuPdf hides the ArtCraft Discord and website links, so their commands are disabled.
+        if PICKERS.contains(&spec.id) || spec.id == "edit.copy" || matches!(spec.id, "help.discord" | "help.website") {
             continue;
         }
         let mut app = PdfCraftApp::new();

@@ -337,7 +337,6 @@ fn date(s: &[char], i: usize) -> Option<usize> {
     Some(k2 + y - i)
 }
 
-
 // ---- Korean personal information (KnuPdf) -----------------------------------------------------
 
 /// Hyphen-like characters Korean documents put between number groups.
@@ -510,8 +509,7 @@ fn kr_driver(s: &[char], i: usize) -> Option<usize> {
         ["서울", "부산", "경기", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주", "대구", "인천", "광주", "대전", "울산", "세종"];
     if let Some(n) = REGIONS.iter().find_map(|r| {
         let n = r.chars().count();
-        (s.get(i..i + n)?.iter().copied().eq(r.chars()) && !i.checked_sub(1).and_then(|p| s.get(p)).is_some_and(|c| c.is_alphanumeric()))
-            .then_some(n)
+        (s.get(i..i + n)?.iter().copied().eq(r.chars()) && !i.checked_sub(1).and_then(|p| s.get(p)).is_some_and(|c| c.is_alphanumeric())).then_some(n)
     }) {
         let k = i + n + usize::from(s.get(i + n) == Some(&' '));
         group(s, k, 2)?;
@@ -564,7 +562,9 @@ fn kr_account(s: &[char], i: usize) -> Option<usize> {
 /// 여권번호: a type letter (M, S, R, O, D, G) and 8 digits (M12345678), or the 2021 format with a
 /// letter in fifth place (M123A4567).
 fn kr_passport(s: &[char], i: usize) -> Option<usize> {
-    if !matches!(s.get(i), Some('M' | 'S' | 'R' | 'O' | 'D' | 'G')) || i.checked_sub(1).and_then(|p| s.get(p)).is_some_and(|c| c.is_ascii_alphanumeric()) {
+    if !matches!(s.get(i), Some('M' | 'S' | 'R' | 'O' | 'D' | 'G'))
+        || i.checked_sub(1).and_then(|p| s.get(p)).is_some_and(|c| c.is_ascii_alphanumeric())
+    {
         return None;
     }
     let old = group(s, i + 1, 8).is_some();
@@ -787,7 +787,10 @@ mod tests {
         assert_eq!(found(Pattern::KrResident, "신청인 900101-1******, 851224-2●●●●●●"), ["900101-1******", "851224-2●●●●●●"]);
         // Impossible month or day, gender digit 0 or 9, too long or too short, masked without a dash.
         assert_eq!(
-            found(Pattern::KrResident, "901301-1234567, 900132-1234567, 900101-9234567, 900101-12345678, 900101-123456, 9001011******, 1900101-1234567"),
+            found(
+                Pattern::KrResident,
+                "901301-1234567, 900132-1234567, 900101-9234567, 900101-12345678, 900101-123456, 9001011******, 1900101-1234567"
+            ),
             Vec::<String>::new()
         );
     }

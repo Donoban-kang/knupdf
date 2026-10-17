@@ -23,7 +23,7 @@ KnuPdf는 PdfCraft나 ArtCraft 개발팀의 공식 제품이 아니며, ArtCraft
 ## 주요 기능
 
 PDF 읽기, 페이지 구성(회전·삭제·추출·분할·합치기), 주석, 양식 작성과 준비, 채우기 및 서명,
-디지털 서명, 암호 보호, 가리기(개인정보 영구 삭제), 압축·최적화, 텍스트 인식(OCR, 라틴 문자),
+디지털 서명, 암호 보호, 가리기(개인정보 영구 삭제), 내보내기(Word·한글 HWPX·PowerPoint·HTML·RTF), 압축·최적화, 텍스트 인식(OCR, 라틴 문자),
 접근성 검사 등 PdfCraft의 기능을 그대로 씁니다.
 
 ## PdfCraft와 달라진 점
@@ -34,6 +34,8 @@ PDF 읽기, 페이지 구성(회전·삭제·추출·분할·합치기), 주석,
 | 한글 글꼴 | 나눔고딕 한글 부분을 이름을 바꿔 포함 (KnuPdf Hangul, OFL 1.1) | `assets/fonts/KnupdfHangul.ttf` |
 | 이름·상표 | 화면 이름 KnuPdf, ArtCraft 로고·Discord 안내 제거 | `crates/ui-egui`, `apps/` |
 | 아이콘 | 강원대 블루 타일에 K | `assets/app-icon-knupdf/` |
+| 한글(HWPX) 내보내기 | PDF를 한글 문서(.hwpx)로 내보내기: 문단·제목·표·그림 | `crates/export/src/hwpx.rs` |
+| 한국 개인정보 가리기 | 주민등록번호·전화·사업자·계좌·여권·운전면허 패턴 | `crates/redact/src/patterns.rs` |
 | Windows 설치 | 한국어 NSIS 설치 프로그램 | `packaging/windows-knupdf/` |
 
 ## 빌드

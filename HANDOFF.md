@@ -3,7 +3,7 @@
 다른 PC에서, 또는 다른 사람·AI 도구가 이어서 작업할 때 처음 읽는 문서입니다.
 무엇을 왜 만드는지는 [KnuPdf-PRD.md](KnuPdf-PRD.md)에 있습니다.
 
-- 마지막 갱신: 2026-10-17 (한국 개인정보 가리기 추가)
+- 마지막 갱신: 2026-10-17 (한글(HWPX) 내보내기 추가)
 - 담당: 강돈호
 - 저장소: https://github.com/Donoban-kang/knupdf (`main`)
 - 현재 버전: 0.8.0 (원본 PdfCraft 버전을 그대로 따름)
@@ -18,6 +18,7 @@
 | 내려받기 | `downloads/`에 설치 파일·zip을 커밋해 README에서 바로 받게 함(임시). GitHub Releases는 **미등록**(6절). Releases에 올린 뒤에는 `downloads/`의 파일을 지우고 링크를 Releases로 바꾸는 것을 권장 |
 | 웹판 | claude.ai Artifact로 비공개 게시: https://claude.ai/artifact/CzyCoaMnWXithtxtsuF2hq |
 | 한국 개인정보 가리기 | 완료. PDF 가리기 → 텍스트 찾아 가리기 → 패턴 → "한국 개인정보 전체"(기본값) 또는 항목별 |
+| 한글(HWPX) 내보내기 | 완료. PDF 내보내기 → 내보낼 형식 → "한글 (.hwpx)". **실제 한컴오피스 한글에서는 아직 미시험**(구조 검사 도구로만 확인) |
 | 다음 할 일 | 9절 |
 
 ## 2. 저장소 구조와 기록
@@ -37,6 +38,7 @@
 | `crates/ui-egui/src/theme.rs` | 한글 글꼴(KnupdfHangul) 등록 |
 | `crates/ui-egui/src/home.rs`, `chrome.rs`, `widgets.rs`, `dialogs.rs` | ArtCraft 로고·Discord 제거, 정보 창(버전, 만든이) |
 | `crates/redact/src/patterns.rs` | 한국 개인정보 패턴(`KrAll`, `KrResident`, `KrPhone`, `KrBusiness`, `KrAccount`, `KrPassport`, `KrDriver`)과 테스트. 자동화 도구 `redact_mark`의 `pattern` 값은 `kr-all`, `kr-resident` … |
+| `crates/export/src/hwpx.rs` | 한글(HWPX, OWPML) 내보내기 작성기와 테스트. 엔진 `compare.rs`의 `OfficeFormat::Hwpx`, 명령 `export.hwpx`, 도구 목록 항목, 자동화 도구 `doc_export_office`(경로 확장자 `.hwpx`)에 연결 |
 | `crates/engine/src/commands.rs`, `links.rs` | 도움말 메뉴에서 Discord·ArtCraft 링크 숨김, "KnuPdf 정보" |
 | `assets/fonts/KnupdfHangul.ttf`, `OFL-KnupdfHangul.txt` | 나눔고딕 한글 부분, 이름 변경(OFL 조건) |
 | `assets/app-icon-knupdf/` | 아이콘 원본(SVG)과 PNG·ICO, 라이선스 |
@@ -149,9 +151,10 @@ git commit -am "Sync PdfCraft upstream to <새 원본 커밋>"
    - 코드: `crates/redact/src/patterns.rs`. 테스트: `cargo test -p pdfcraft-redact --lib patterns`
    - 명령줄로 확인: `pdfcraft-cli run --script steps.json` (doc_open → redact_mark `pattern: kr-all` → redact_apply → doc_save)
 4. **CI 정리**: 원본 GitHub Actions 중 KnuPdf에 필요 없는 것(macOS·FreeBSD·서명 등)을 끄고, Windows 설치 파일을 자동으로 만드는 작업을 추가합니다.
-5. **직인 찍기**(F-03), **한국어 날짜 형식**(F-04).
-6. **화면 개편**(F-06): 강원대 블루 리본형 UI 시안을 기준으로 합니다.
-7. **코드 서명**(F-07), **한글 OCR 조사**(F-05).
+5. **한글(HWPX) 내보내기 점검**(F-11): 한컴오피스 한글 2018 이상에서 열기·표·그림·쪽 나눔 확인. 쪽마다 크기가 다른 PDF는 첫 쪽 크기로 통일되는 한계 개선(구역 나누기)
+6. **직인 찍기**(F-03), **한국어 날짜 형식**(F-04).
+7. **화면 개편**(F-06): 강원대 블루 리본형 UI 시안을 기준으로 합니다.
+8. **코드 서명**(F-07), **한글 OCR 조사**(F-05).
 
 ## 10. 이번 작업에서 만든 산출물
 
