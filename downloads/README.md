@@ -14,8 +14,8 @@
 받은 파일이 바뀌지 않았는지 확인할 때 써요. PowerShell에서 `Get-FileHash 파일이름`을 실행해 아래 값과 같은지 비교해요.
 
 ```
-3b29345bcbc35c7aac50dfbe2a6e730b5c43d21528d2699dd6309e5998561475  KnuPdf-0.8.0-windows-x64-setup.exe
-9e91d3fa1574c20068a79a1b6b7240d83393bd7d2fca530d8c36afc010c11c63  KnuPdf-0.8.0-windows-x64-portable.zip
+c2cb5e518a3eee93fe98f3b15b84ed36d34adc10f80d05b7fcc6be3fb121d051  KnuPdf-0.8.0-windows-x64-setup.exe
+85bfec062784ebcd9c3f16ba880dacb942a92a9b7ec0cca1b060c3be901a061d  KnuPdf-0.8.0-windows-x64-portable.zip
 ```
 
 ## 이 버전에 들어 있는 것
