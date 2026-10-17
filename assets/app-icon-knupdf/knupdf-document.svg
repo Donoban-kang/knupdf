@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
-  <!-- KnuPdf PDF document icon: a white page with a blue PDF band and the ㅋ mark. -->
+  <!-- KnuPdf PDF document icon: a white page with a blue PDF band and the K mark. -->
   <path d="M52 16 H164 L212 64 V240 H52 Z" fill="#FFFFFF" stroke="#C3CFDF" stroke-width="8" stroke-linejoin="round"/>
   <path d="M164 16 V64 H212 Z" fill="#DCE7F6" stroke="#C3CFDF" stroke-width="8" stroke-linejoin="round"/>
   <rect x="24" y="140" width="164" height="72" rx="14" fill="#0A4A9F"/>
   <text x="106" y="194" text-anchor="middle" font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold" font-size="50" fill="#FFFFFF">PDF</text>
-  <path d="M152.0 118.0251256281407H141.49748743718595V96.13567839195979L86.33165829145729 96.90954773869346L86.0 87.62311557788944L141.49748743718595 86.95979899497486V71.3718592964824H87.54773869346734V61.974874371859286H152.0Z" fill="#0A4A9F" stroke="#0A4A9F" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M82 54 H104 V84 L130 54 H156 L124 90 L158 128 H132 L104 96 V128 H82 Z" fill="#0A4A9F"/>
 </svg>

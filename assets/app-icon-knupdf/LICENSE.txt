@@ -1,9 +1,8 @@
 KnuPdf icons (knupdf.svg, knupdf-small.svg, knupdf-document.svg and every file rendered from them
 in this directory: *.png, *.ico).
 
-Original artwork drawn for KnuPdf from simple geometric shapes. The "ㅋ" is the outline of the
-NanumSquare Bold glyph (NAVER, SIL Open Font License 1.1), converted to a plain path; the OFL
-allows using a font's glyphs in artwork, and no font software is included. The "PDF" label on the
+Original artwork drawn for KnuPdf from simple geometric shapes (the K is a drawn polygon, no
+third-party material). The "PDF" label on the
 document icon is set in DejaVu Sans when rendered. The colours follow the KNUPDF screen design
 (Kangwon blue #0A4A9F, navy #0B1F3F). Licensed like the rest of KnuPdf, under either of the MIT
 licence or the Apache License 2.0, at your option.

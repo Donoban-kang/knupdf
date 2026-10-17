@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
-<!-- KnuPdf app icon: a bold Hangul "ㅋ" on a Kangwon blue tile with a folded corner. -->
+<!-- KnuPdf app icon: a bold white K on a Kangwon blue tile with a folded corner. -->
 <path d="M66 12 H190 L244 66 V190 Q244 244 190 244 H66 Q12 244 12 190 V66 Q12 12 66 12 Z" fill="#0A4A9F"/>
 <path d="M190 12 L244 66 H206 Q190 66 190 50 Z" fill="#A9C6EE"/>
-<path d="M186.0 177.25628140703517H167.54103852596316V138.78391959798995L70.58291457286433 140.14405360134003L70.0 123.82244556113903L167.54103852596316 122.65661641541038V95.25963149078727H72.72026800670017V78.74371859296483H186.0Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="8" stroke-linejoin="round"/>
-<rect x="70" y="208" width="116" height="10" rx="5" fill="#A9C6EE"/>
+<path d="M66.0 59.3 L101.0 59.3 L101.0 107.9 L144.2 59.3 L187.3 59.3 L133.4 116.0 L190.0 180.7 L146.9 180.7 L101.0 126.7 L101.0 180.7 L66.0 180.7 Z" fill="#FFFFFF"/>
+<rect x="70" y="204" width="116" height="10" rx="5" fill="#A9C6EE"/>
 </svg>
