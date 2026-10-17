@@ -147,9 +147,11 @@ fn plural_sl(n: u64) -> usize {
 }
 
 /// The registry. English first: it is the fallback and the source language.
-pub static LANGUAGES: [LangInfo; 23] = [
+pub static LANGUAGES: [LangInfo; 24] = [
     LangInfo { code: "en", name: "English", source: "", plural: plural_one_other, rtl: false, catalog: OnceLock::new() },
     LangInfo { code: "ja", name: "日本語", source: include_str!("ja.tsv"), plural: plural_none, rtl: false, catalog: OnceLock::new() },
+    // Korean (KNUPDF); every `ko-*` locale (`ko-KR`, `ko_KR.UTF-8`) resolves here. One plural form.
+    LangInfo { code: "ko", name: "한국어", source: include_str!("ko.tsv"), plural: plural_none, rtl: false, catalog: OnceLock::new() },
     // Simplified Chinese; `zh`, `zh-CN`, `zh-SG` and `zh-Hans-*` locales resolve here (see `candidates`).
     LangInfo {
         code: "zh-hans", name: "简体中文", source: include_str!("zh-hans.tsv"), plural: plural_none, rtl: false, catalog: OnceLock::new()
@@ -1062,7 +1064,7 @@ mod tests {
     #[test]
     fn language_persists_and_invalid_input_keeps_current_language() {
         let mut app = crate::PdfCraftApp::default();
-        assert_eq!(app.language, AUTO);
+        assert_eq!(app.language, "ko");
         app.set_option("language", "JA").unwrap();
         assert_eq!(app.language, "ja");
         assert!(app.set_option("language", "xx").is_err());

@@ -370,6 +370,12 @@ fn font_definitions_for_platform(prefer_hans: bool, platform: FontPolicyPlatform
     // Keep missing Latin/Cyrillic letters in the app's own faces (for example Bulgarian ѝ,
     // absent from JetBrains Mono), before egui's defaults or optional system/CJK fallbacks.
     fonts.families.entry(FontFamily::Monospace).or_default().insert(1, "Inter".to_owned());
+    // KNUPDF: Hangul for the Korean interface and Korean file names, before the CJK faces so a
+    // Korean line draws from one face.
+    add(&mut fonts, "KnupdfHangul", include_bytes!("../../../assets/fonts/KnupdfHangul.ttf"));
+    for family in [FontFamily::Proportional, FontFamily::Monospace] {
+        fonts.families.entry(family).or_default().push("KnupdfHangul".to_owned());
+    }
     // The same static bytes pdfcraft-fonts uses for Japanese/Chinese text in PDFs: one copy, not two.
     for face in pdfcraft_fonts::ui_cjk_fonts(prefer_hans) {
         let name = face.name();
