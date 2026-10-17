@@ -1,0 +1,36 @@
+﻿KnuPdf 사용 안내 및 라이선스
+
+KnuPdf는 오픈 소스 PDF 응용 프로그램 PdfCraft(https://github.com/storytold/pdfcraft)를
+바탕으로 한국어 화면과 한글 글꼴을 더해 만든 프로그램입니다.
+
+- 프로그램: MIT 또는 Apache-2.0 라이선스 (원문: 설치 폴더의 LICENSE-MIT, LICENSE-APACHE, NOTICE)
+- 한글 화면 글꼴 "KnuPdf Hangul": 나눔고딕(NAVER) 한글 부분을 이름을 바꿔 포함, SIL Open Font License 1.1
+  (원문: 설치 폴더의 OFL-KnupdfHangul.txt)
+- 텍스트 인식(OCR) 모델: Robert Knight의 ocrs-models, CC BY-SA 4.0
+  (https://creativecommons.org/licenses/by-sa/4.0/ , 자세한 내용: models\ATTRIBUTION.txt)
+- 이 프로그램은 어떠한 보증도 없이 "있는 그대로" 제공됩니다.
+
+KnuPdf는 ArtCraft나 PdfCraft 개발팀의 공식 제품이 아닙니다.
+
+------------------------------------------------------------------------
+MIT License
+
+Copyright (c) 2026 ArtCraft Team and the PdfCraft contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
