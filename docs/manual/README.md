@@ -162,7 +162,7 @@ PDF를 열고, 보고, 고치고, 지키는 방법을 하나씩 따라 해 봐�
 
 **[메뉴] → [도움말] → [KnuPdf 정보]**를 눌러요.
 
-![KnuPdf 정보 창. 버전 0.8.0, 만든이 강돈호](images/about.webp)
+![KnuPdf 정보 창. 버전 0.8.0, 만든이 강원대학교 강돈호](images/about.webp)
 </details>
 
 ## 우리의 약속
