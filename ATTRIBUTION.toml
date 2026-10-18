@@ -3142,7 +3142,7 @@ licence = "MIT OR Apache-2.0"
 licence_file = "LICENSE-MIT"
 kind = "image"
 usage = "User manual (docs/manual)"
-sha256 = "c6000945b47c0fae43c1678c57ac59ff679920b32578ae51f7f38a3107399e4f"
+sha256 = "575ae37071c53b948e3720108c64bd747581c848223e3a21f369161a8b4e7183"
 
 [[asset]]
 path = "docs/manual/images/combine.webp"
