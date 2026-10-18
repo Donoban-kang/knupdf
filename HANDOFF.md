@@ -13,7 +13,7 @@
 | 항목 | 상태 |
 |---|---|
 | 한국어 화면 | 완료. 번역 누락 0(테스트로 확인) |
-| 이름·아이콘·정보 창 | 완료. KnuPdf, K 타일 아이콘, "만든이: 강돈호" |
+| 이름·아이콘·정보 창 | 완료. KnuPdf, K 타일 아이콘, "만든이: 강원대학교 강돈호", 게시자 강원대학교 |
 | Windows 설치 파일·휴대용 zip | 빌드 완료. **실제 Windows에서는 아직 미시험**(Wine에서 실행·창 제목·정보 창만 확인) |
 | 내려받기 | `downloads/`에 설치 파일·zip을 커밋해 README에서 바로 받게 함(임시). GitHub Releases는 **미등록**(6절). Releases에 올린 뒤에는 `downloads/`의 파일을 지우고 링크를 Releases로 바꾸는 것을 권장 |
 | 웹판 | claude.ai Artifact로 비공개 게시: https://claude.ai/artifact/CzyCoaMnWXithtxtsuF2hq |
@@ -42,7 +42,7 @@
 | `crates/engine/src/commands.rs`, `links.rs` | 도움말 메뉴에서 Discord·ArtCraft 링크 숨김, "KnuPdf 정보" |
 | `assets/fonts/KnupdfHangul.ttf`, `OFL-KnupdfHangul.txt` | 나눔고딕 한글 부분, 이름 변경(OFL 조건) |
 | `assets/app-icon-knupdf/` | 아이콘 원본(SVG)과 PNG·ICO, 라이선스 |
-| `apps/pdfcraft/build.rs`, `src/main.rs` | exe 아이콘·제품 정보(KnuPdf, 회사명 강돈호), 창 아이콘 |
+| `apps/pdfcraft/build.rs`, `src/main.rs` | exe 아이콘·제품 정보(KnuPdf, 회사명 강원대학교), 창 아이콘 |
 | `apps/pdfcraft-web/index.html` | 웹 탭 제목·아이콘, `lang="ko"` |
 | `packaging/windows-knupdf/` | NSIS 설치 스크립트, 라이선스 안내문, Linux용 빌드 스크립트 |
 | `packaging/web-artifact/` | 웹판을 Artifact로 올리기 위한 로더 페이지와 패키징 스크립트 |

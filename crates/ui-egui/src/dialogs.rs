@@ -8,7 +8,7 @@ use pdfcraft_engine::Edit;
 use crate::{CloseRequest, Dialog, PdfCraftApp, PropsTab, panels::human_size, widgets};
 
 /// The KnuPdf author shown in the About dialog.
-const KNUPDF_AUTHOR: &str = "강돈호";
+const KNUPDF_AUTHOR: &str = "강원대학교 강돈호";
 
 const INFO_KEYS: [&str; 4] = ["Title", "Author", "Subject", "Keywords"];
 
