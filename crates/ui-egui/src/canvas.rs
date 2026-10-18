@@ -5863,6 +5863,8 @@ trailer << /Root 1 0 R >>
             let bytes = app.session.create_blank(300.0, 400.0, 100).unwrap();
             app.open_bytes("organize-gaps.pdf", None, bytes.as_ref().clone()).unwrap();
             app.views[0].organize = true;
+            // The labels below are the English sources (KnuPdf opens in Korean).
+            app.language = "en".into();
             app
         });
         h.run_steps(4);

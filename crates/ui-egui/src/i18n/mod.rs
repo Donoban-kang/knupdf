@@ -1082,10 +1082,10 @@ mod tests {
         assert_eq!(restored.language, "ja");
         app.set_option("language", AUTO).unwrap();
         assert_eq!(app.language, AUTO);
-        // Settings written before the system-locale default (no key) follow the system.
+        // KnuPdf: settings without the key keep the Korean default.
         let mut legacy = crate::PdfCraftApp::default();
         legacy.restore("{}");
-        assert_eq!(legacy.language, AUTO);
+        assert_eq!(legacy.language, "ko");
     }
 
     #[test]
