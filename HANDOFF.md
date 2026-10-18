@@ -124,7 +124,7 @@ git commit -am "Sync PdfCraft upstream to <새 원본 커밋>"
 작업한 클라우드 세션에서는 릴리스 생성이 막혀 있어 직접 올려야 합니다.
 1. https://github.com/Donoban-kang/knupdf/releases/new 를 엽니다.
 2. 태그 `v0.8.1`을 만들고, 대상은 `main`으로 둡니다. 제목은 `KnuPdf 0.8.1 (시험판)`으로 합니다.
-3. 설명은 `packaging/windows-knupdf/RELEASE-NOTES-0.8.1.md` 내용을 붙여 넣습니다. 파일 확인값(SHA-256)은 새로 빌드한 파일 기준으로 고칩니다.
+3. 설명은 `packaging/windows-knupdf/RELEASE-NOTES-0.8.1.md` 내용을 붙여 넣습니다. 파일 확인값(SHA-256)은 새로 빌드한 파일 기준으로 고칩니다. 릴리스 페이지에서는 상대 주소 링크가 열리지 않으므로, 노트 안의 링크는 `https://github.com/Donoban-kang/knupdf/blob/main/...` 같은 전체 주소로 씁니다.
 4. `KnuPdf-0.8.1-windows-x64-setup.exe`와 `...-portable.zip`을 첨부합니다.
 5. Set as a pre-release에 체크한 뒤 Publish release를 누릅니다.
 
