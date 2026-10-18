@@ -1,5 +1,15 @@
 # Korean (ko) catalog for KnuPdf. Columns, separated by a TAB:  context <TAB> source <TAB> translation
-#   (format: see ja.tsv). Written from the plain meaning of each English label using ordinary Korean
+#
+#   context  empty                a plain UI string; `source` is the English text in the code
+#            @id                  a command id (e.g. file.saveAs): wins over the English text for
+#                                 that menu item, so one id can read differently from its twin
+#            @plural              `source` is "one|other" (English forms); the translation lists the
+#                                 language's forms separated by "|" (see `plural` in i18n/mod.rs)
+#            anything else        a disambiguating context passed to `tr_ctx`
+#   escapes  \n  \t  \\  inside a column. `{name}` placeholders must appear in both columns.
+#   lines starting with # and blank lines are ignored.
+#
+#   Written from the plain meaning of each English label using ordinary Korean
 #   computing vocabulary; no proprietary localisation resource was consulted. The product name is
 #   KnuPdf; technology names (PDF, JavaScript, Acrobat ...) stay in Latin letters.
 

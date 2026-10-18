@@ -455,8 +455,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn lithuanian_translates_every_dynamic_panel_title() {
-        let lang = crate::i18n::Lang::from_code("lt").expect("Lithuanian is registered");
+    fn korean_translates_every_dynamic_panel_title() {
+        let lang = crate::i18n::Lang::from_code("ko").expect("Korean is registered");
         for panel in Panel::ALL {
             assert_ne!(crate::i18n::tr(lang, panel.label()), panel.label(), "{} remains untranslated", panel.id());
         }

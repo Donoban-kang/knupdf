@@ -576,7 +576,7 @@ mod tests {
     #[test]
     fn search_placeholder_never_overlaps_the_shortcut() {
         let previous = crate::i18n::current();
-        for (code, expected) in [("en", "Ctrl+K"), ("de", "Strg+K")] {
+        for (code, expected) in [("en", "Ctrl+K"), ("ko", "Ctrl+K")] {
             crate::i18n::set_current(crate::i18n::Lang::from_code(code).unwrap());
             for width in [260.0, 160.0, 90.0] {
                 let ctx = egui::Context::default();
