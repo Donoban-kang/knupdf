@@ -1,4 +1,4 @@
-KnuPdf 0.8.1 시험판입니다. 0.8.0에서 바뀐 점만 적었습니다. 기능 전체는 [0.8.0 안내](RELEASE-NOTES-0.8.0.md)를 보세요.
+KnuPdf 0.8.1 시험판입니다. 0.8.0에서 바뀐 점만 적었습니다. 기능 전체는 [0.8.0 안내](https://github.com/Donoban-kang/knupdf/blob/main/packaging/windows-knupdf/RELEASE-NOTES-0.8.0.md)를 보세요.
 
 ## 바뀐 점
 
