@@ -275,33 +275,33 @@ fn theme_commands_and_options_report_preference_and_effective_colours() {
 }
 
 #[test]
-fn lithuanian_password_dialog_translates_dynamic_labels_and_validation() {
+fn korean_password_dialog_translates_dynamic_labels_and_validation() {
     let (mut h, c) = harness();
-    ok(&mut h, &c, "ui.set", json!({ "key": "language", "value": "lt" }));
+    ok(&mut h, &c, "ui.set", json!({ "key": "language", "value": "ko" }));
     ok(&mut h, &c, "ui.set", json!({ "key": "dialog", "value": "protect" }));
     h.run_steps(2);
-    h.get_by_role_and_label(egui::accesskit::Role::RadioButton, "Peržiūrėti");
-    h.get_by_role_and_label(egui::accesskit::Role::RadioButton, "Redaguoti").click();
+    h.get_by_role_and_label(egui::accesskit::Role::RadioButton, "보기");
+    h.get_by_role_and_label(egui::accesskit::Role::RadioButton, "편집").click();
     h.run_steps(2);
     assert!(!h.state().protect_draft.viewing);
-    h.get_by_role_and_label(egui::accesskit::Role::PasswordInput, "Įveskite slaptažodį");
-    h.get_by_role_and_label(egui::accesskit::Role::PasswordInput, "Pakartokite slaptažodį");
+    h.get_by_role_and_label(egui::accesskit::Role::PasswordInput, "암호 입력");
+    h.get_by_role_and_label(egui::accesskit::Role::PasswordInput, "암호 다시 입력");
     h.state_mut().protect_draft.password = "abc".into();
     h.state_mut().protect_draft.confirm = "xyz".into();
     h.run_steps(2);
-    h.get_by_label("Slaptažodžiai nesutampa.");
+    h.get_by_label("암호가 일치하지 않습니다.");
 }
 
 #[test]
-fn lithuanian_inspector_title_updates_through_the_control_channel() {
+fn korean_inspector_title_updates_through_the_control_channel() {
     let (mut h, c) = harness();
     ok(&mut h, &c, "ui.set", json!({ "key": "panel", "value": "comments" }));
     h.run_steps(2);
     h.get_by_role_and_label(egui::accesskit::Role::Tab, "Inspector");
     let documents = ok(&mut h, &c, "ui.state", json!({}))["documents"].clone();
-    ok(&mut h, &c, "ui.set", json!({ "key": "language", "value": "lt" }));
+    ok(&mut h, &c, "ui.set", json!({ "key": "language", "value": "ko" }));
     h.run_steps(2);
-    h.get_by_role_and_label(egui::accesskit::Role::Tab, "Inspektorius");
+    h.get_by_role_and_label(egui::accesskit::Role::Tab, "속성 검사기");
     assert!(h.query_by_role_and_label(egui::accesskit::Role::Tab, "Inspector").is_none());
     assert_eq!(ok(&mut h, &c, "ui.state", json!({}))["documents"], documents);
     ok(&mut h, &c, "ui.set", json!({ "key": "language", "value": "en" }));
@@ -320,7 +320,7 @@ fn language_switch_preserves_document_and_command_ids() {
     let documents = ok(&mut h, &c, "ui.state", json!({}))["documents"].clone();
     assert_eq!(documents[0]["dirty"], true);
     let commands = ok(&mut h, &c, "ui.commands", json!({}));
-    for code in ["ja", "zh-hans", "fr", "de", "uk", "lt", "en"] {
+    for code in ["ko", "en"] {
         ok(&mut h, &c, "ui.set", json!({ "key": "language", "value": code }));
         h.run_steps(2);
         let state = ok(&mut h, &c, "ui.state", json!({}));
@@ -723,19 +723,19 @@ fn state_and_view_options() {
 }
 
 #[test]
-fn japanese_controls_and_search_keep_command_ids() {
+fn korean_controls_and_search_keep_command_ids() {
     let (mut h, c) = harness();
-    ok(&mut h, &c, "ui.set", json!({ "key": "language", "value": "ja" }));
-    assert_eq!(ok(&mut h, &c, "ui.state", json!({}))["language"], "ja");
-    ok(&mut h, &c, "ui.click", json!({ "label": "閲覧" }));
+    ok(&mut h, &c, "ui.set", json!({ "key": "language", "value": "ko" }));
+    assert_eq!(ok(&mut h, &c, "ui.state", json!({}))["language"], "ko");
+    ok(&mut h, &c, "ui.click", json!({ "label": "읽기" }));
     assert_eq!(ok(&mut h, &c, "ui.state", json!({}))["mode"], "Read");
 
     ok(&mut h, &c, "ui.command", json!({ "id": "app.preferences" }));
-    let prefs = ok(&mut h, &c, "ui.inspect", json!({ "query": "表示言語" }));
+    let prefs = ok(&mut h, &c, "ui.inspect", json!({ "query": "표시 언어" }));
     assert!(prefs["count"].as_u64().unwrap() > 0, "{prefs}");
-    ok(&mut h, &c, "ui.click", json!({ "label": "OK" }));
+    ok(&mut h, &c, "ui.click", json!({ "label": "확인" }));
 
-    for (query, translated) in [("整理", "ページを整理"), ("Split document", "文書を分割…"), ("page.split", "文書を分割…")] {
+    for (query, translated) in [("구성", "페이지 구성"), ("Split document", "문서 분할…"), ("page.split", "문서 분할…")] {
         ok(&mut h, &c, "ui.command", json!({ "id": "view.palette" }));
         ok(&mut h, &c, "ui.type", json!({ "text": query }));
         let hits = ok(&mut h, &c, "ui.inspect", json!({ "query": translated }));
@@ -750,117 +750,52 @@ fn japanese_controls_and_search_keep_command_ids() {
 }
 
 #[test]
-fn german_preferences_and_search_keep_command_ids() {
-    let (mut h, c) = harness();
-    ok(&mut h, &c, "ui.set", json!({ "key": "language", "value": "de" }));
-    ok(&mut h, &c, "ui.click", json!({ "label": "Lesen" }));
-    assert_eq!(ok(&mut h, &c, "ui.state", json!({}))["mode"], "Read");
-    ok(&mut h, &c, "ui.command", json!({ "id": "app.preferences" }));
-    let prefs = ok(&mut h, &c, "ui.inspect", json!({ "query": "Sprache der Oberfläche" }));
-    assert!(prefs["count"].as_u64().unwrap() > 0, "{prefs}");
-    let selector = ok(&mut h, &c, "ui.inspect", json!({ "query": "Deutsch" }));
-    let combo = selector["widgets"].as_array().unwrap().iter().find(|w| w["role"] == "ComboBox").expect("language selector");
-    ok(&mut h, &c, "ui.click", json!({ "id": combo["id"] }));
-    ok(&mut h, &c, "ui.click", json!({ "label": "English" }));
-    assert_eq!(ok(&mut h, &c, "ui.state", json!({}))["language"], "en");
-    let selector = ok(&mut h, &c, "ui.inspect", json!({ "query": "English" }));
-    let combo = selector["widgets"].as_array().unwrap().iter().find(|w| w["role"] == "ComboBox").expect("language selector");
-    ok(&mut h, &c, "ui.click", json!({ "id": combo["id"] }));
-    ok(&mut h, &c, "ui.click", json!({ "label": "Deutsch" }));
-    assert_eq!(ok(&mut h, &c, "ui.state", json!({}))["language"], "de");
-    ok(&mut h, &c, "ui.click", json!({ "label": "OK" }));
-    for query in ["Dokument teilen", "Split document", "page.split"] {
-        ok(&mut h, &c, "ui.command", json!({ "id": "view.palette" }));
-        ok(&mut h, &c, "ui.type", json!({ "text": query }));
-        let hits = ok(&mut h, &c, "ui.inspect", json!({ "query": "Dokument teilen…" }));
-        assert!(hits["count"].as_u64().unwrap() > 0, "{query}: {hits}");
-        ok(&mut h, &c, "ui.key", json!({ "key": "Escape" }));
-        h.state_mut().palette_query.clear();
-    }
-    assert_eq!(ok(&mut h, &c, "ui.state", json!({}))["documents"][0]["name"], "doc.pdf");
-}
-
-#[test]
-fn ukrainian_preferences_and_search_keep_command_ids() {
-    let (mut h, c) = harness();
-    ok(&mut h, &c, "ui.set", json!({ "key": "language", "value": "uk" }));
-    ok(&mut h, &c, "ui.command", json!({ "id": "app.preferences" }));
-    for label in ["Мова інтерфейсу", "Українська"] {
-        let found = ok(&mut h, &c, "ui.inspect", json!({ "query": label }));
-        assert!(found["count"].as_u64().unwrap() > 0, "{label}: {found}");
-    }
-    ok(&mut h, &c, "ui.click", json!({ "label": "OK" }));
-    for query in ["Розділити", "Split document", "page.split"] {
-        ok(&mut h, &c, "ui.command", json!({ "id": "view.palette" }));
-        ok(&mut h, &c, "ui.type", json!({ "text": query }));
-        let hits = ok(&mut h, &c, "ui.inspect", json!({ "query": "Розділити документ…" }));
-        assert!(hits["count"].as_u64().unwrap() > 0, "{query}: {hits}");
-        ok(&mut h, &c, "ui.key", json!({ "key": "Escape" }));
-        h.state_mut().palette_query.clear();
-    }
-    for (dialog, label) in [("properties", "Властивості документа"), ("protect", "Захистити паролем"), ("about", "Учасники")]
-    {
-        ok(&mut h, &c, "ui.set", json!({ "key": "dialog", "value": dialog }));
-        let found = ok(&mut h, &c, "ui.inspect", json!({ "query": label }));
-        assert!(found["count"].as_u64().unwrap() > 0, "{dialog}: {found}");
-    }
-    ok(&mut h, &c, "ui.set", json!({ "key": "dialog", "value": "none" }));
-    assert!(!h.state_mut().apply_edit(pdfcraft_engine::Edit::DeletePages { pages: vec![0, 1, 2, 3, 4] }));
-    let state = ok(&mut h, &c, "ui.state", json!({}));
-    assert_eq!(state["language"], "uk");
-    assert_eq!(state["notice"], "Помилка «Видалити сторінки»: a document must keep at least one page");
-    assert_eq!(state["documents"][0]["name"], "doc.pdf");
-}
-
-#[test]
 fn preferences_menu_and_shortcut_allow_switching_interface_languages() {
     let (mut h, c) = harness();
-    ok(&mut h, &c, "ui.set", json!({ "key": "language", "value": "ja" }));
-    ok(&mut h, &c, "ui.click", json!({ "label": "メニュー" }));
-    ok(&mut h, &c, "ui.click", json!({ "label": "編集 ⏵" }));
-    let menu = ok(&mut h, &c, "ui.inspect", json!({ "query": "環境設定…" }));
+    ok(&mut h, &c, "ui.set", json!({ "key": "language", "value": "ko" }));
+    ok(&mut h, &c, "ui.click", json!({ "label": "메뉴" }));
+    ok(&mut h, &c, "ui.click", json!({ "label": "편집 ⏵" }));
+    let menu = ok(&mut h, &c, "ui.inspect", json!({ "query": "환경설정…" }));
     let prefs = menu["widgets"].as_array().unwrap().iter().find(|w| w["clickable"] == true).expect("Preferences menu item");
     ok(&mut h, &c, "ui.click", json!({ "id": prefs["id"] }));
-    for (current, next, code) in [("日本語", "English", "en"), ("English", "Українська", "uk"), ("Українська", "日本語", "ja")]
-    {
+    for (current, next, code) in [("한국어", "English", "en"), ("English", "한국어", "ko")] {
         let selector = ok(&mut h, &c, "ui.inspect", json!({ "query": current }));
         let combo = selector["widgets"].as_array().unwrap().iter().find(|w| w["role"] == "ComboBox").expect("language selector");
         ok(&mut h, &c, "ui.click", json!({ "id": combo["id"] }));
         ok(&mut h, &c, "ui.click", json!({ "label": next }));
         assert_eq!(ok(&mut h, &c, "ui.state", json!({}))["language"], code);
     }
-    ok(&mut h, &c, "ui.click", json!({ "label": "OK" }));
+    ok(&mut h, &c, "ui.click", json!({ "label": "확인" }));
     ok(&mut h, &c, "ui.key", json!({ "key": ",", "modifiers": ["command"] }));
-    let prefs = ok(&mut h, &c, "ui.inspect", json!({ "query": "表示言語" }));
+    let prefs = ok(&mut h, &c, "ui.inspect", json!({ "query": "표시 언어" }));
     assert!(prefs["count"].as_u64().unwrap() > 0, "{prefs}");
-    ok(&mut h, &c, "ui.click", json!({ "label": "OK" }));
+    ok(&mut h, &c, "ui.click", json!({ "label": "확인" }));
 
     ok(&mut h, &c, "ui.command", json!({ "id": "help.shortcuts" }));
-    for label in ["キーボードショートカット", "開く", "環境設定", "次／前の検索結果", "ダブルクリック", "閉じる"]
-    {
+    for label in ["바로 가기 키", "열기", "환경설정", "다음/이전 검색 결과", "두 번 클릭", "닫기"] {
         let found = ok(&mut h, &c, "ui.inspect", json!({ "query": label }));
         assert!(found["count"].as_u64().unwrap() > 0, "{label}: {found}");
     }
     let english = ok(&mut h, &c, "ui.inspect", json!({ "query": "Next / previous match" }));
     assert_eq!(english["count"], 0);
-    ok(&mut h, &c, "ui.click", json!({ "label": "閉じる" }));
+    ok(&mut h, &c, "ui.click", json!({ "label": "닫기" }));
     assert_eq!(ok(&mut h, &c, "ui.state", json!({}))["documents"][0]["name"], "doc.pdf");
 }
 
 #[test]
-fn japanese_dialogs_errors_and_custom_action_names() {
+fn korean_dialogs_errors_and_custom_action_names() {
     let (mut h, c) = harness();
-    ok(&mut h, &c, "ui.set", json!({"key": "language", "value": "ja"}));
+    ok(&mut h, &c, "ui.set", json!({"key": "language", "value": "ko"}));
     for (dialog, label) in [
-        ("properties", "文書のプロパティ"),
-        ("protect", "パスワードで保護"),
-        ("export-image", "画像に書き出し"),
-        ("optimize", "PDF の最適化"),
-        ("recognize-text", "テキストを認識"),
-        ("accessibility-options", "アクセシビリティチェックのオプション"),
-        ("js-console", "JavaScript コンソール"),
-        ("compare-files", "ファイルを比較"),
-        ("sign", "署名用のデジタル ID を設定"),
+        ("properties", "문서 속성"),
+        ("protect", "암호로 보호"),
+        ("export-image", "이미지로 내보내기"),
+        ("optimize", "PDF 최적화 도구"),
+        ("recognize-text", "텍스트 인식"),
+        ("accessibility-options", "접근성 검사기 옵션"),
+        ("js-console", "JavaScript 콘솔"),
+        ("compare-files", "파일 비교"),
+        ("sign", "서명용 디지털 ID 구성"),
     ] {
         ok(&mut h, &c, "ui.set", json!({"key": "dialog", "value": dialog}));
         let found = ok(&mut h, &c, "ui.inspect", json!({"query": label}));
@@ -869,8 +804,8 @@ fn japanese_dialogs_errors_and_custom_action_names() {
     ok(&mut h, &c, "ui.set", json!({"key": "dialog", "value": "none"}));
     assert!(!h.state_mut().apply_edit(pdfcraft_engine::Edit::DeletePages { pages: vec![0, 1, 2, 3, 4] }));
     let state = ok(&mut h, &c, "ui.state", json!({}));
-    // The frame is translated; the engine's own error text is shown as it is.
-    assert_eq!(state["notice"], "操作「ページを削除」に失敗しました: a document must keep at least one page");
+    // KnuPdf: the engine's fixed error text is translated too when the catalog has it.
+    assert_eq!(state["notice"], "페이지 삭제 실패: 문서에는 페이지가 하나 이상 남아 있어야 합니다");
     assert_eq!(ok(&mut h, &c, "ui.state", json!({}))["documents"][0]["name"], "doc.pdf");
 
     h.state_mut().custom_actions.push(pdfcraft_engine::actions::Action {
@@ -881,64 +816,64 @@ fn japanese_dialogs_errors_and_custom_action_names() {
     });
     h.state_mut().wizard.selected = Some("Save".to_string());
     ok(&mut h, &c, "ui.set", json!({"key": "dialog", "value": "action-wizard"}));
-    for label in ["アクションウィザード", "Save", "Print"] {
+    for label in ["작업 마법사", "Save", "Print"] {
         let found = ok(&mut h, &c, "ui.inspect", json!({"query": label}));
         assert!(found["widgets"].as_array().unwrap().iter().any(|w| w["label"] == label || w["value"] == label), "{found}");
     }
 }
 
 #[test]
-fn simplified_chinese_about_tabs_and_credit_controls() {
+fn korean_about_tabs_and_credit_controls() {
     let (mut h, c) = harness();
     let documents = ok(&mut h, &c, "ui.state", json!({}))["documents"].clone();
-    ok(&mut h, &c, "ui.set", json!({"key": "language", "value": "zh-hans"}));
+    ok(&mut h, &c, "ui.set", json!({"key": "language", "value": "ko"}));
     ok(&mut h, &c, "ui.set", json!({"key": "dialog", "value": "about"}));
-    for label in ["关于", "贡献者", "模型"] {
+    for label in ["정보", "기여자", "모델"] {
         let found = ok(&mut h, &c, "ui.inspect", json!({"query": label}));
         assert!(found["widgets"].as_array().unwrap().iter().any(|w| w["label"] == label), "{found}");
     }
-    ok(&mut h, &c, "ui.click", json!({"label": "贡献者"}));
-    for label in ["用户名", "显示名称", "真实姓名", "排序", "名称列表", "表格", "首次提交"] {
+    ok(&mut h, &c, "ui.click", json!({"label": "기여자"}));
+    for label in ["사용자 이름", "표시 이름", "실명", "정렬", "기타", "표", "첫 커밋"] {
         let found = ok(&mut h, &c, "ui.inspect", json!({"query": label}));
         assert!(found["count"].as_u64().unwrap() > 0, "{label}: {found}");
     }
-    ok(&mut h, &c, "ui.click", json!({"label": "表格"}));
-    for label in ["新增行", "删除行", "净增行", "新增资源", "删除资源"] {
+    ok(&mut h, &c, "ui.click", json!({"label": "표"}));
+    for label in ["+줄", "−줄", "Δ줄", "+바이너리", "−바이너리"] {
         let found = ok(&mut h, &c, "ui.inspect", json!({"query": label}));
         assert!(found["count"].as_u64().unwrap() > 0, "{label}: {found}");
     }
-    ok(&mut h, &c, "ui.click", json!({"label": "模型"}));
-    let columns = ok(&mut h, &c, "ui.inspect", json!({"query": "占全部提交的比例"}));
-    let empty = ok(&mut h, &c, "ui.inspect", json!({"query": "此版本未包含模型贡献记录。"}));
+    ok(&mut h, &c, "ui.click", json!({"label": "모델"}));
+    let columns = ok(&mut h, &c, "ui.inspect", json!({"query": "전체 커밋 대비 %"}));
+    let empty = ok(&mut h, &c, "ui.inspect", json!({"query": "이 사본에는 모델 출처 정보가 포함되어 있지 않습니다."}));
     assert!(columns["count"].as_u64().unwrap() > 0 || empty["count"].as_u64().unwrap() > 0, "{columns}, {empty}");
     assert_eq!(ok(&mut h, &c, "ui.state", json!({}))["documents"], documents);
 }
 
 #[test]
-fn simplified_chinese_signature_prompts_and_errors_keep_document_state() {
+fn korean_signature_prompts_and_errors_keep_document_state() {
     let (mut h, c) = harness();
     let documents = ok(&mut h, &c, "ui.state", json!({}))["documents"].clone();
-    ok(&mut h, &c, "ui.set", json!({"key": "language", "value": "zh-hans"}));
+    ok(&mut h, &c, "ui.set", json!({"key": "language", "value": "ko"}));
     ok(&mut h, &c, "ui.set", json!({"key": "dialog", "value": "signature"}));
-    let typed = ok(&mut h, &c, "ui.inspect", json!({"query": "请输入您的签名。"}));
+    let typed = ok(&mut h, &c, "ui.inspect", json!({"query": "서명을(를) 입력하세요."}));
     assert!(typed["count"].as_u64().unwrap() > 0, "{typed}");
     // The shell also has a Draw control; the modal's button is registered after the shell.
-    let draw = ok(&mut h, &c, "ui.inspect", json!({"query": "绘制"}));
+    let draw = ok(&mut h, &c, "ui.inspect", json!({"query": "그리기"}));
     let id = draw["widgets"]
         .as_array()
         .unwrap()
         .iter()
         .rev()
-        .find(|w| w["label"] == "绘制" && w["clickable"] == true)
+        .find(|w| w["label"] == "그리기" && w["clickable"] == true)
         .expect("signature Draw button")["id"]
         .clone();
     ok(&mut h, &c, "ui.click", json!({"id": id}));
-    let drawn = ok(&mut h, &c, "ui.inspect", json!({"query": "请在下方绘制您的签名。"}));
+    let drawn = ok(&mut h, &c, "ui.inspect", json!({"query": "아래에 서명을(를) 그리세요."}));
     assert!(drawn["count"].as_u64().unwrap() > 0, "{drawn}");
-    ok(&mut h, &c, "ui.click", json!({"label": "取消"}));
+    ok(&mut h, &c, "ui.click", json!({"label": "취소"}));
     assert!(!h.state_mut().apply_edit(pdfcraft_engine::Edit::DeletePages { pages: vec![0, 1, 2, 3, 4] }));
     let state = ok(&mut h, &c, "ui.state", json!({}));
-    assert_eq!(state["notice"], "删除页面失败：a document must keep at least one page");
+    assert_eq!(state["notice"], "페이지 삭제 실패: 문서에는 페이지가 하나 이상 남아 있어야 합니다");
     assert_eq!(state["documents"], documents, "a language change and failed edit must preserve the document");
 }
 

@@ -1600,19 +1600,15 @@ mod tests {
         use crate::i18n::{Lang, tr};
         let english = AppearanceLabels::default();
         assert_eq!(appearance_labels(Lang::EN), (english.clone(), false));
-        for code in ["de", "es", "fr", "it", "pt-br", "pl", "tr", "sl", "hu"] {
-            let lang = Lang::from_code(code).unwrap();
-            let (labels, in_english) = appearance_labels(lang);
-            assert!(!in_english, "{code}: {labels:?}");
-            for ((field, ours), (_, source)) in labels.fields().into_iter().zip(english.fields()) {
-                assert_eq!(ours, tr(lang, source), "{code}: {field}");
-            }
+        let latin = Lang::latin_test();
+        let (labels, in_english) = appearance_labels(latin);
+        assert!(!in_english, "{labels:?}");
+        for ((field, ours), (_, source)) in labels.fields().into_iter().zip(english.fields()) {
+            assert_eq!(ours, tr(latin, source), "{field}");
         }
-        let (de, _) = appearance_labels(Lang::from_code("de").unwrap());
-        assert_eq!((de.signed_by.as_str(), de.reason.as_str()), ("Digital signiert von", "Grund: "));
-        for code in ["zh-hans", "zh-hant", "ja", "ru", "uk", "bg", "kk", "el", "te", "cs", "lt", "ar"] {
-            assert_eq!(appearance_labels(Lang::from_code(code).unwrap()), (english.clone(), true), "{code}");
-        }
+        assert_eq!((labels.signed_by.as_str(), labels.reason.as_str()), ("Digital signiert von", "Grund: "));
+        // The standard font can't draw Hangul, so Korean signatures carry the English labels.
+        assert_eq!(appearance_labels(Lang::from_code("ko").unwrap()), (english.clone(), true));
         for lang in Lang::all() {
             let (labels, in_english) = appearance_labels(lang);
             assert_eq!(labels.first_undrawable(), None, "{}: signing would refuse {labels:?}", lang.code());
@@ -1624,7 +1620,7 @@ mod tests {
     /// its label, in the words given, and only the values when the labels are off.
     #[test]
     fn preview_lines_use_the_labels_signing_stamps() {
-        let (de, _) = appearance_labels(crate::i18n::Lang::from_code("de").unwrap());
+        let (de, _) = appearance_labels(crate::i18n::Lang::latin_test());
         let all = Appearance { reason: true, location: true, ..Appearance::default() };
         let lines = detail_lines(&all, &de, "Ada", " Genehmigt ", "Berlin", "2026.10.14 09:30:00 Z");
         assert_eq!(lines, ["Digital signiert von", "Ada", "Grund: Genehmigt", "Ort: Berlin", "Datum: 2026.10.14 09:30:00 Z"]);

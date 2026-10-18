@@ -23,7 +23,7 @@ fn main() {
         .set_icon_with_id("../../assets/app-icon-knupdf/knupdf-document.ico", "2")
         .set_manifest(windows_manifest::WINDOWS_MANIFEST)
         .set("ProductName", "KnuPdf")
-        .set("CompanyName", "강돈호")
+        .set("CompanyName", "강원대학교")
         .set("FileDescription", "KnuPdf PDF 작업 도구")
         .set("LegalCopyright", "Based on PdfCraft (c) the PdfCraft contributors. MIT OR Apache-2.0.")
         .set("OriginalFilename", "KnuPdf.exe")

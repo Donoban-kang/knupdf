@@ -577,10 +577,10 @@ fn the_panel_keeps_its_width_with_a_reply_box_open() {
     h.run_steps(2);
     field(&h, "Add a reply").type_text("Agreed");
     h.run_steps(1);
-    h.state_mut().set_option("language", "ru").unwrap();
+    h.state_mut().set_option("language", "ko").unwrap();
     h.run_steps(3);
     let before = panel_width(&h);
-    h.get_by_label("Опубликовать").hover();
+    h.get_by_label("게시").hover();
     for _ in 0..30 {
         h.run_steps(1);
     }

@@ -16,7 +16,7 @@ cp "$WEB"/pdfcraft-web-*.js "$OUT/pdfcraft.js"
 gzip -9 -c "$WEB"/pdfcraft-web-*_bg.wasm > "$OUT/app.wasm.gz"
 TOTAL=$(stat -c%s "$OUT/app.wasm.gz")
 (cd "$OUT" && split -b 7500000 -d -a 1 app.wasm.gz part && rm app.wasm.gz && for f in part?; do mv "$f" "$f.wasm"; done)
-PARTS=$(cd "$OUT" && ls part*.wasm | sed "s/^/'.\//; s/$/'/" | paste -sd, -)
+PARTS=$(cd "$OUT" && printf "'./%s'\n" part*.wasm | paste -sd, -)
 sed -e "s/const TOTAL = [0-9]*;/const TOTAL = $TOTAL;/" \
     -e "s#const parts = \[[^]]*\];#const parts = [$PARTS];#" \
     "$ROOT/packaging/web-artifact/knupdf.html" > "$OUT/knupdf.html"

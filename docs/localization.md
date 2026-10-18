@@ -59,10 +59,11 @@ German labels keep nouns capitalized, including tool names inserted into notices
 
 ## How translations work
 
-PdfCraft uses the same system as PhotoCraft (`crates/ui-egui/src/i18n/`):
+PdfCraft uses the same system as PhotoCraft (`crates/ui-egui/src/i18n/`). KnuPdf ships English and Korean (`ko.tsv`) only; the other upstream catalogs and their tests are removed.
+
 
 - Strings in the code stay in English and serve as lookup keys. At draw time, `tl!("Save")` returns the text in the current language, and falls back to English when there is no entry.
-- Each language has a catalog, `crates/ui-egui/src/i18n/<code>.tsv`, with one entry per line: `context<TAB>English<TAB>translation`. An empty context marks a plain string. `@id` keys an entry by command id (for example `file.saveAs`), so one menu item can read differently from another with the same English label. `@plural` holds plural forms. Any other context disambiguates an English word with several meanings (`tl_ctx!` in UI code, for example the signature pad's "Type" button against the "Type" column). The header of `ja.tsv` documents the format and escapes.
+- Each language has a catalog, `crates/ui-egui/src/i18n/<code>.tsv`, with one entry per line: `context<TAB>English<TAB>translation`. An empty context marks a plain string. `@id` keys an entry by command id (for example `file.saveAs`), so one menu item can read differently from another with the same English label. `@plural` holds plural forms. Any other context disambiguates an English word with several meanings (`tl_ctx!` in UI code, for example the signature pad's "Type" button against the "Type" column). The header of `ko.tsv` documents the format and escapes.
 - Placeholders (`{name}`) must appear in both columns. A trailing `…` must be kept. `i18n::fmt` fills placeholders in one pass, so a value such as a file name containing `{n}` is inserted as written.
 - Catalogs are validated strictly: unknown escapes, unknown `@` contexts, placeholder or ellipsis mismatches, wrong plural form counts and duplicates are errors. The tests require the bundled catalogs to have none; at run time a bad line is skipped (and logged) and that string shows in English.
 - Catalogs are assets: each `.tsv` has an `ATTRIBUTION.toml` entry with `kind = "translation"` and its SHA-256, checked by `cargo xtask assets`. After editing a catalog, put the new hash into its entry by hand (`sha256sum crates/ui-egui/src/i18n/<code>.tsv`), because `cargo xtask assets --write` does not touch `ATTRIBUTION.toml`; the hash check is deliberate, so a changed asset gets its provenance re-checked. Without it `cargo xtask assets` and the test `assets::tests::the_real_manifest_passes` fail.
@@ -76,13 +77,13 @@ Some sentences are not the interface's own. The accessibility checker, the PDF/A
 - `said(&words)` says one of them: the layer looks its own wording up through the closure it is given, then fills the holes with the document's values — a page number, a font name, what the person typed — in one pass, so a value containing `{n}` is inserted as written.
 - The UI passes `&crate::i18n::words`, which is a catalog lookup, so the sentence reads in the interface language. `in_english` is the same thing in English, and a wording with no entry comes back as it stands, which is the English — a catalog missing one shows an English sentence rather than a gap.
 - The lists are `a11y::{WORDINGS, REPORT_WORDS}`, `preflight::WORDINGS`, `sign::pdf::{WORDINGS, kind::ALL}`, `print::WORDINGS` and the engine's `{EDIT_LABELS, BATCH_LABELS}`. `a11y::report_html` takes a language tag and a `words` closure, so a saved report reads the way the panel read, down to its `lang` attribute.
-- `spanish_covers_what_the_engine_says` requires an entry for every wording in those lists, and `spanish_keeps_the_holes_in_what_the_engine_says` requires each translation to keep the same holes, so the catalog cannot fall behind the engine without a test saying so. Other languages are free to add the entries when they are translated; until then those sentences show in English as before.
+- `spanish_covers_what_the_engine_says` requires an entry for every wording in those lists, and `spanish_keeps_the_holes_in_what_the_engine_says` requires each translation to keep the same holes, so the catalog cannot fall behind the engine without a test saying so. (Upstream PdfCraft; KnuPdf removed the Spanish catalog and these two tests with it.) Other languages are free to add the entries when they are translated; until then those sentences show in English as before.
 
 Error details that come from the operating system, and faults rather than mistakes (a file that cannot be read, a lock that was poisoned), still carry their own text and are shown as they are.
 
 ## Adding a language
 
-1. Copy the header of `ja.tsv` into `xx.tsv` and translate entries.
+1. Copy the header of `ko.tsv` into `xx.tsv` and translate entries.
 2. Add one row to `LANGUAGES` in `crates/ui-egui/src/i18n/mod.rs`: code, native name, catalog and plural rule.
 3. Add an `ATTRIBUTION.toml` entry for the catalog (`kind = "translation"`), with the catalog's `sha256sum` as `sha256`, then run `cargo xtask assets --write` (it regenerates `ATTRIBUTION.md` only) and `cargo xtask assets`.
 

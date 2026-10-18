@@ -1,5 +1,5 @@
 ; KnuPdf Windows installer (NSIS, built on Linux with makensis).
-; makensis -DVERSION=0.8.0 -DSTAGE=<staging dir> -DOUT=<installer.exe> knupdf.nsi
+; makensis -DVERSION=0.8.1 -DSTAGE=<staging dir> -DOUT=<installer.exe> knupdf.nsi
 ; The staging dir holds KnuPdf.exe, models\, the licences and the app icon (KnuPdf.ico).
 
 Unicode true
@@ -21,7 +21,7 @@ InstallDirRegKey HKLM "Software\${APP}" "InstallDir"
 BrandingText "${APP} ${VERSION}"
 VIProductVersion "${VERSION}.0"
 VIAddVersionKey /LANG=1042 "ProductName" "${APP}"
-VIAddVersionKey /LANG=1042 "CompanyName" "강돈호"
+VIAddVersionKey /LANG=1042 "CompanyName" "강원대학교"
 VIAddVersionKey /LANG=1042 "FileDescription" "${APP} 설치 프로그램"
 VIAddVersionKey /LANG=1042 "FileVersion" "${VERSION}"
 VIAddVersionKey /LANG=1042 "LegalCopyright" "Based on PdfCraft. MIT OR Apache-2.0."
@@ -73,7 +73,7 @@ Section "KnuPdf (필수)" SecMain
   WriteRegStr HKLM "Software\${APP}" "InstallDir" "$INSTDIR"
   WriteRegStr HKLM "${UNINST_KEY}" "DisplayName" "${APP}"
   WriteRegStr HKLM "${UNINST_KEY}" "DisplayVersion" "${VERSION}"
-  WriteRegStr HKLM "${UNINST_KEY}" "Publisher" "강돈호"
+  WriteRegStr HKLM "${UNINST_KEY}" "Publisher" "강원대학교"
   WriteRegStr HKLM "${UNINST_KEY}" "DisplayIcon" "$INSTDIR\${EXE}"
   WriteRegStr HKLM "${UNINST_KEY}" "InstallLocation" "$INSTDIR"
   WriteRegStr HKLM "${UNINST_KEY}" "UninstallString" '"$INSTDIR\uninstall.exe"'
