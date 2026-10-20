@@ -6415,6 +6415,43 @@ trailer << /Root 1 0 R >>
         }
     }
 
+    /// U+00B7 (middle dot) has no entry in UniKS-UCS2-H, which gives KS X 1001's middle dot as
+    /// U+30FB. Reading it consumed one byte instead of the two every UCS-2 code has, so the next
+    /// code started inside it: `00B7 0041` read as `00`, `B700` (뜀), `41`. A code a Unicode CMap
+    /// doesn't list is now read whole, and, being Unicode itself, is drawn and extracted as that
+    /// character; the codes around it are unchanged.
+    #[test]
+    fn unmapped_codes_in_unicode_cmaps_are_read_whole() {
+        // ·A·, then 가 on a second line.
+        let content = "BT /F1 30 Tf 5 45 Td <00B7004100B7> Tj 0 -32 Td <AC00> Tj ET";
+        let pdf = format!(
+            "%PDF-1.7
+1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
+3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 100 80] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj
+4 0 obj << /Length {} >> stream
+{content}
+endstream endobj
+5 0 obj << /Type /Font /Subtype /Type0 /BaseFont /HYGoThic-Medium /Encoding /UniKS-UCS2-H /DescendantFonts [6 0 R] >> endobj
+6 0 obj << /Type /Font /Subtype /CIDFontType2 /BaseFont /HYGoThic-Medium /CIDSystemInfo << /Registry (Adobe) /Ordering (Korea1) /Supplement 1 >>
+  /FontDescriptor 7 0 R /DW 1000 /W [34 [600]] >> endobj
+7 0 obj << /Type /FontDescriptor /FontName /HYGoThic-Medium /Flags 4 /FontBBox [0 -120 1000 880] /ItalicAngle 0 /Ascent 880 /Descent -120 /CapHeight 800 /StemV 93 >> endobj
+trailer << /Root 1 0 R >>
+%%EOF",
+            content.len()
+        );
+        let mut r = PageRenderer::new(Arc::new(pdf.into_bytes()), RenderConfig::default());
+        let text = r.render(RenderRequest { page: 0, kind: RequestKind::Text, tile: None, scale: 1.0, tag: 0, ..Default::default() });
+        let plain = text.text.as_ref().expect("a text layer").plain_text();
+        assert!(!plain.contains('뜀'), "a misread code: {plain:?}");
+        assert_eq!(plain.split_whitespace().collect::<Vec<_>>(), ["·A·", "가"], "{plain:?}");
+        // The dots are drawn: the first 30-point cell, left of A, has ink.
+        let p = r.render(RenderRequest { page: 0, kind: RequestKind::Pixels, tile: None, scale: 1.0, tag: 0, ..Default::default() });
+        let width = p.width as usize;
+        let dot = p.rgba.as_chunks::<4>().0.iter().enumerate().filter(|(i, c)| c[0] < 128 && i % width < 30 && i / width < 40).count();
+        assert!(dot > 2, "the middle dot is drawn ({dot} dark pixels)");
+    }
+
     /// The bold style of a non-embedded Korean font gets the bold face, the rest the regular one.
     #[test]
     fn korean_substitute_follows_the_bold_style() {

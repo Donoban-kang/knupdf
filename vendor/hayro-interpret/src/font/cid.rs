@@ -45,6 +45,35 @@ pub(crate) struct Type0Font {
     /// PdfCraft patch: whether the CIDs belong to an Adobe character collection (Japan1, GB1,
     /// CNS1, Korea1), whose glyph numbering no substitute other than a CID-keyed CFF font shares.
     adobe_collection: bool,
+    /// PdfCraft patch: the codes of a predefined Unicode `CMap` (`UniKS-UCS2-H`,
+    /// `UniJIS-UTF16-H`, …), which are themselves UCS-2 or UTF-16.
+    unicode_codes: Option<UnicodeCodes>,
+}
+
+/// PdfCraft patch: the form of the codes in a predefined Unicode `CMap`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum UnicodeCodes {
+    /// Two bytes per code (`Uni…-UCS2-H`).
+    Ucs2,
+    /// Two bytes, or four for a surrogate pair (`Uni…-UTF16-H`).
+    Utf16,
+}
+
+impl UnicodeCodes {
+    /// The form named by a predefined `CMap` name, `None` for every other `CMap`.
+    fn of(name: Option<&[u8]>) -> Option<Self> {
+        let name = name?;
+        if !name.starts_with(b"Uni") {
+            return None;
+        }
+        if name.ends_with(b"-UCS2-H") || name.ends_with(b"-UCS2-V") {
+            Some(Self::Ucs2)
+        } else if name.ends_with(b"-UTF16-H") || name.ends_with(b"-UTF16-V") {
+            Some(Self::Utf16)
+        } else {
+            None
+        }
+    }
 }
 
 impl Type0Font {
@@ -56,6 +85,7 @@ impl Type0Font {
         let cmap = read_encoding(&dict.get::<Object<'_>>(ENCODING)?, cmap_resolver)?;
 
         let horizontal = cmap.metadata().writing_mode != Some(WritingMode::Vertical);
+        let unicode_codes = UnicodeCodes::of(cmap.metadata().name.as_deref());
 
         let descendant_font = dict
             .get::<Array<'_>>(DESCENDANT_FONTS)?
@@ -162,11 +192,21 @@ impl Type0Font {
             fallback,
             to_unicode_is_cid_indexed,
             adobe_collection,
+            unicode_codes,
         })
     }
 
     pub(crate) fn map_code(&self, code: u32) -> GlyphId {
         let Some(cid) = self.code_to_cid(code) else {
+            // PdfCraft patch: a code a Unicode `CMap` doesn't list (U+00B7 in `UniKS-UCS2-H`) is
+            // still that character, which a substitute draws from its own `cmap`.
+            if self.fallback
+                && let Some(c) = self.unlisted_unicode(code)
+                && let FontType::OpenType(t) = &self.font_type
+                && let Some(glyph) = t.font_ref().charmap().map(c)
+            {
+                return glyph;
+            }
             return GlyphId::NOTDEF;
         };
 
@@ -415,7 +455,39 @@ impl Type0Font {
             }
         }
 
+        // PdfCraft patch: a code the `CMap` doesn't list still has the length of its codespace
+        // (ISO 32000-2 §9.7.6.3). Consuming one byte here started the next code inside this
+        // one, so in `UniKS-UCS2-H` `00B7 0041` read as `00`, `B700` (뜀), `41`. The codes of a
+        // Unicode `CMap` are two bytes, or four for a UTF-16 surrogate pair.
+        if let Some(form) = self.unicode_codes {
+            let unit = |at: usize| Some(u32::from(u16::from_be_bytes([*bytes.get(at)?, *bytes.get(at + 1)?])));
+            if let Some(high) = unit(offset) {
+                if form == UnicodeCodes::Utf16
+                    && (0xD800..0xDC00).contains(&high)
+                    && let Some(low) = unit(offset + 2)
+                {
+                    return ((high << 16) | low, 4);
+                }
+                return (high, 2);
+            }
+        }
+
         (0, 1)
+    }
+
+    /// PdfCraft patch: the character an unlisted code of a Unicode `CMap` stands for.
+    fn unlisted_unicode(&self, code: u32) -> Option<char> {
+        match self.unicode_codes? {
+            UnicodeCodes::Ucs2 => char::from_u32(code),
+            UnicodeCodes::Utf16 if code > 0xFFFF => {
+                let (high, low) = (code >> 16, code & 0xFFFF);
+                if !(0xD800..0xDC00).contains(&high) || !(0xDC00..0xE000).contains(&low) {
+                    return None;
+                }
+                char::from_u32(0x10000 + ((high - 0xD800) << 10) + (low - 0xDC00))
+            }
+            UnicodeCodes::Utf16 => char::from_u32(code),
+        }
     }
 
     pub(crate) fn origin_displacement(&self, code: u32) -> Vec2 {
@@ -433,7 +505,11 @@ impl Type0Font {
     pub(crate) fn char_code_to_unicode(&self, code: u32) -> Option<BfString> {
         if let Some(to_unicode) = &self.to_unicode {
             let key = if self.to_unicode_is_cid_indexed {
-                self.code_to_cid(code).unwrap_or(0)
+                match self.code_to_cid(code) {
+                    Some(cid) => cid,
+                    // PdfCraft patch: an unlisted code of a Unicode `CMap` is its own character.
+                    None => return self.unlisted_unicode(code).map(BfString::Char),
+                }
             } else {
                 code
             };
