@@ -645,6 +645,14 @@ fn paper_matching_accepts_rounded_metric_sizes_but_not_custom_or_invalid_sizes()
     }
 }
 
+/// KnuPdf: a print starts on A4, the paper Korean offices print on.
+#[test]
+fn prints_start_on_a4() {
+    assert_eq!(PAPERS[A4_PAPER].0, "A4");
+    assert_eq!(Settings::default().paper, (595.28, 841.89));
+    assert_eq!(cups_media(A4_PAPER), Some("A4"));
+}
+
 #[test]
 fn label_is_cut_turned_upright_and_fitted_without_distortion() {
     let label = LABEL_PAPER;

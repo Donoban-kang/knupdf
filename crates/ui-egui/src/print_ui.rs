@@ -128,7 +128,7 @@ impl Default for PrintDraft {
             content: Content::DocumentAndMarkups,
             as_image: false,
             dpi: 300.0,
-            paper: 0,
+            paper: print::A4_PAPER,
             sheet: 0,
             current_page: 0,
             driver_options: None,
@@ -904,7 +904,7 @@ pub(crate) fn body(
                 });
                 ui.end_row();
                 ui.label(tl!("Paper:"));
-                let paper_name = PAPERS.get(d.paper).map_or("US Letter", |p| p.0);
+                let paper_name = PAPERS.get(d.paper).map_or("A4", |p| p.0);
                 let before = d.paper;
                 egui::ComboBox::from_id_salt("paper").selected_text(tl!(paper_name)).width(260.0).show_ui(ui, |ui| {
                     for (i, (name, _)) in PAPERS.iter().enumerate() {
@@ -1279,6 +1279,10 @@ mod tests {
         assert_eq!(job.scaling, spool::Scaling::Exact);
         assert_eq!(job.duplex, Some(spool::Duplex::LongEdge));
         assert_eq!(PrintDraft::default().job("report.pdf").duplex, Some(spool::Duplex::Off));
+        // KnuPdf: the dialog first opens on A4, and the print-ready PDF is laid out on it.
+        let d = PrintDraft::default();
+        assert_eq!(PAPERS[d.paper].0, "A4");
+        assert_eq!(d.settings(1, &["1".to_string()]).map(|s| s.paper), Ok(PAPERS[print::A4_PAPER].1));
     }
 
     /// A job being spooled holds the progress card, counting its sheets as the spooler reports
