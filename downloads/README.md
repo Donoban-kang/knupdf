@@ -2,8 +2,8 @@
 
 | 파일 | 크기 | 설명 | 내려받기 |
 |---|---|---|---|
-| `KnuPdf-0.8.2-windows-x64-setup.exe` | 28 MB | **설치 프로그램** (권장). 시작 메뉴·바탕 화면 바로 가기를 만들어요 | [⬇ 설치 파일 받기](https://github.com/Donoban-kang/knupdf/raw/main/downloads/KnuPdf-0.8.2-windows-x64-setup.exe) |
-| `KnuPdf-0.8.2-windows-x64-portable.zip` | 36 MB | **휴대용**. 설치 없이 압축을 풀고 `KnuPdf.exe` 실행. USB에 넣어 써도 돼요 | [⬇ 휴대용 zip 받기](https://github.com/Donoban-kang/knupdf/raw/main/downloads/KnuPdf-0.8.2-windows-x64-portable.zip) |
+| `KnuPdf-0.8.2-windows-x64-setup.exe` | 32 MB | **설치 프로그램** (권장). 시작 메뉴·바탕 화면 바로 가기를 만들어요 | [⬇ 설치 파일 받기](https://github.com/Donoban-kang/knupdf/raw/main/downloads/KnuPdf-0.8.2-windows-x64-setup.exe) |
+| `KnuPdf-0.8.2-windows-x64-portable.zip` | 40 MB | **휴대용**. 설치 없이 압축을 풀고 `KnuPdf.exe` 실행. USB에 넣어 써도 돼요 | [⬇ 휴대용 zip 받기](https://github.com/Donoban-kang/knupdf/raw/main/downloads/KnuPdf-0.8.2-windows-x64-portable.zip) |
 
 - 지원: Windows 10 / 11 64비트 · 버전 0.8.2 (시험판) · 만든이 강원대학교 강돈호 · 게시자 강원대학교
 - 설치 방법은 [쉬운 사용 설명서 미션 1](../docs/manual/README.md#미션-1-컴퓨터에-설치하기)을 보세요.
@@ -14,8 +14,8 @@
 받은 파일이 바뀌지 않았는지 확인할 때 써요. PowerShell에서 `Get-FileHash 파일이름`을 실행해 아래 값과 같은지 비교해요.
 
 ```
-b47b28ba30c800c8d9afbef0b5472d4622fb52a4a7524dafad2b740eeaf7c1c0  KnuPdf-0.8.2-windows-x64-setup.exe
-3f9efb866c2d233f994f2b21f711274daa5f7f707bdace0f492e2467c9b7d289  KnuPdf-0.8.2-windows-x64-portable.zip
+6df760391fa2a90f1be2358efacde029408789ea7aba200beb9c569f897fe022  KnuPdf-0.8.2-windows-x64-setup.exe
+780e22df6c923c7d7eb84bab81695285944db8807a37f01b08d1925c292b3e35  KnuPdf-0.8.2-windows-x64-portable.zip
 ```
 
 ## 이 버전에 들어 있는 것

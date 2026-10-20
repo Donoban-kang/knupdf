@@ -17,7 +17,7 @@ PDF를 열고, 보고, 고치고, 지키는 방법을 하나씩 따라 해 봐�
 
 **준비물**: Windows 10 또는 11 컴퓨터 · KnuPdf 설치 파일 · 연습할 PDF 파일 한 개
 
-> **설치 파일 받기**: [⬇ KnuPdf-0.8.2-windows-x64-setup.exe (28 MB)](https://github.com/Donoban-kang/knupdf/raw/main/downloads/KnuPdf-0.8.2-windows-x64-setup.exe)  
+> **설치 파일 받기**: [⬇ KnuPdf-0.8.2-windows-x64-setup.exe (32 MB)](https://github.com/Donoban-kang/knupdf/raw/main/downloads/KnuPdf-0.8.2-windows-x64-setup.exe)  
 > 받은 파일은 보통 컴퓨터의 **다운로드** 폴더에 있어요.
 
 **미션 목록**

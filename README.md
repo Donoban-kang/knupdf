@@ -11,8 +11,8 @@ KnuPdf는 PdfCraft나 ArtCraft 개발팀의 공식 제품이 아니며, ArtCraft
 
 | | |
 |---|---|
-| **[⬇ 설치 파일 받기 (KnuPdf-0.8.2-windows-x64-setup.exe, 28 MB)](https://github.com/Donoban-kang/knupdf/raw/main/downloads/KnuPdf-0.8.2-windows-x64-setup.exe)** | 권장. 설치 후 시작 메뉴에서 실행 |
-| [⬇ 휴대용 zip 받기 (KnuPdf-0.8.2-windows-x64-portable.zip, 36 MB)](https://github.com/Donoban-kang/knupdf/raw/main/downloads/KnuPdf-0.8.2-windows-x64-portable.zip) | 설치 없이 압축 풀고 `KnuPdf.exe` 실행 |
+| **[⬇ 설치 파일 받기 (KnuPdf-0.8.2-windows-x64-setup.exe, 32 MB)](https://github.com/Donoban-kang/knupdf/raw/main/downloads/KnuPdf-0.8.2-windows-x64-setup.exe)** | 권장. 설치 후 시작 메뉴에서 실행 |
+| [⬇ 휴대용 zip 받기 (KnuPdf-0.8.2-windows-x64-portable.zip, 40 MB)](https://github.com/Donoban-kang/knupdf/raw/main/downloads/KnuPdf-0.8.2-windows-x64-portable.zip) | 설치 없이 압축 풀고 `KnuPdf.exe` 실행 |
 
 파일 확인값과 설치 안내: [downloads/](downloads/README.md) · 처음 실행 시 SmartScreen 경고가 나오면 **추가 정보 → 실행**
 
