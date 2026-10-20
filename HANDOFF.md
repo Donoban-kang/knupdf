@@ -3,10 +3,10 @@
 다른 PC에서, 또는 다른 사람·AI 도구가 이어서 작업할 때 처음 읽는 문서입니다.
 무엇을 왜 만드는지는 [KnuPdf-PRD.md](KnuPdf-PRD.md)에 있습니다.
 
-- 마지막 갱신: 2026-10-17 (한글(HWPX) 내보내기 추가)
+- 마지막 갱신: 2026-10-20 (0.8.2: 한글 변환 개선, 인쇄 선명도, 기본 용지 A4)
 - 담당: 강돈호
 - 저장소: https://github.com/Donoban-kang/knupdf (`main`)
-- 현재 버전: 0.8.1 (0.8.0은 원본 PdfCraft 버전을 따랐고, 0.8.1부터 KnuPdf 수정 배포마다 올림)
+- 현재 버전: 0.8.2 (0.8.0은 원본 PdfCraft 버전을 따랐고, 0.8.1부터 KnuPdf 수정 배포마다 올림)
 
 ## 1. 한눈에 보는 현재 상태
 
@@ -77,7 +77,7 @@ packaging/windows-knupdf/build-linux.sh        # → dist/windows/ 에 setup.exe
 3. 스테이징 폴더를 만듭니다. 들어갈 파일은 `build-linux.sh`와 같습니다.
    - `KnuPdf.exe`(위 exe 이름 변경), `KnuPdf.ico`, 라이선스 파일들, `models\`(OCR 모델 2개와 `ATTRIBUTION.txt`)
 4. 다음 명령으로 설치 파일을 만듭니다.
-   `makensis -DVERSION=0.8.1 -DSTAGE=<스테이징 폴더> -DOUT=KnuPdf-0.8.1-windows-x64-setup.exe packaging\windows-knupdf\knupdf.nsi`
+   `makensis -DVERSION=0.8.2 -DSTAGE=<스테이징 폴더> -DOUT=KnuPdf-0.8.2-windows-x64-setup.exe packaging\windows-knupdf\knupdf.nsi`
 - WSL(Ubuntu)이 있으면 위 Linux 방식을 그대로 써도 됩니다.
 
 ### 웹판
@@ -127,9 +127,9 @@ git commit -am "Sync PdfCraft upstream to <새 원본 커밋>"
 
 작업한 클라우드 세션에서는 릴리스 생성이 막혀 있어 직접 올려야 합니다.
 1. https://github.com/Donoban-kang/knupdf/releases/new 를 엽니다.
-2. 태그 `v0.8.1`을 만들고, 대상은 `main`으로 둡니다. 제목은 `KnuPdf 0.8.1 (시험판)`으로 합니다.
-3. 설명은 `packaging/windows-knupdf/RELEASE-NOTES-0.8.1.md` 내용을 붙여 넣습니다. 파일 확인값(SHA-256)은 새로 빌드한 파일 기준으로 고칩니다. 릴리스 페이지에서는 상대 주소 링크가 열리지 않으므로, 노트 안의 링크는 `https://github.com/Donoban-kang/knupdf/blob/main/...` 같은 전체 주소로 씁니다.
-4. `KnuPdf-0.8.1-windows-x64-setup.exe`와 `...-portable.zip`을 첨부합니다.
+2. 태그 `v0.8.2`을 만들고, 대상은 `main`으로 둡니다. 제목은 `KnuPdf 0.8.2 (시험판)`으로 합니다.
+3. 설명은 `packaging/windows-knupdf/RELEASE-NOTES-0.8.2.md` 내용을 붙여 넣습니다. 파일 확인값(SHA-256)은 새로 빌드한 파일 기준으로 고칩니다. 릴리스 페이지에서는 상대 주소 링크가 열리지 않으므로, 노트 안의 링크는 `https://github.com/Donoban-kang/knupdf/blob/main/...` 같은 전체 주소로 씁니다.
+4. `KnuPdf-0.8.2-windows-x64-setup.exe`와 `...-portable.zip`을 첨부합니다.
 5. Set as a pre-release에 체크한 뒤 Publish release를 누릅니다.
 
 ## 7. 점검 방법
