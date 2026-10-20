@@ -1,2 +1,2 @@
-b47b28ba30c800c8d9afbef0b5472d4622fb52a4a7524dafad2b740eeaf7c1c0  KnuPdf-0.8.1-windows-x64-setup.exe
-3f9efb866c2d233f994f2b21f711274daa5f7f707bdace0f492e2467c9b7d289  KnuPdf-0.8.1-windows-x64-portable.zip
+6df760391fa2a90f1be2358efacde029408789ea7aba200beb9c569f897fe022  KnuPdf-0.8.2-windows-x64-setup.exe
+780e22df6c923c7d7eb84bab81695285944db8807a37f01b08d1925c292b3e35  KnuPdf-0.8.2-windows-x64-portable.zip
