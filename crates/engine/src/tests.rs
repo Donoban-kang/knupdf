@@ -1144,6 +1144,7 @@ fn copy_restricted_documents_refuse_extraction_unless_opened_by_the_owner() {
         "export.text",
         "export.docx",
         "export.hwpx",
+        "export.hwpx_layout",
         "export.pptx",
         "export.html",
         "export.rtf",

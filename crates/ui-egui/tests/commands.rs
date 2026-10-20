@@ -63,6 +63,7 @@ const PICKERS: &[&str] = &[
     "form.merge_data",
     "export.docx",
     "export.hwpx",
+    "export.hwpx_layout",
     "export.pptx",
     "export.html",
     "export.rtf",
