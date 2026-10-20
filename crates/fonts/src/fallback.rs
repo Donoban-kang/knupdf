@@ -20,10 +20,11 @@
 //! 2. `/BaseFont` names one of the standard 14 (or a well-known alias such as Arial). Exact
 //!    published metrics apply, so this is as close to right as a substitution gets.
 //! 3. craft-fonts holds that exact family. Never another family — see [`crate::embedding`].
-//! 4. The descendant font's `/CIDSystemInfo /Ordering` names a script, and craft-fonts has a face
-//!    for it. Today that means Adobe-Japan1.
-//! 5. The ordering names a script we have **no** licensed face for (GB1, CNS1, Korea1). There is
-//!    no honest substitute, so the chain reports none: the caller draws nothing and can say why.
+//! 4. The descendant font's `/CIDSystemInfo /Ordering` names a script, and craft-fonts (or, for
+//!    Korean, the bundled [`crate::KOREAN_FONTS`]) has a face for it: Adobe-Japan1 and, in KnuPdf,
+//!    Adobe-Korea1.
+//! 5. The ordering names a script we have **no** licensed face for (GB1, CNS1). There is no honest
+//!    substitute, so the chain reports none: the caller draws nothing and can say why.
 //! 6. Otherwise, the nearest of the standard 14 by `/FontDescriptor /Flags` — serif, fixed pitch,
 //!    bold and italic. This step always succeeds, so a simple font is never left without a face.
 
@@ -156,9 +157,11 @@ impl Substitution {
 fn script_for(ordering: &str) -> Option<&'static str> {
     match ordering {
         "Japan1" => Some("Jpan"),
+        // KnuPdf bundles NanumBarunGothic (OFL-1.1) for Korean.
+        "Korea1" | "KR" => Some("Kore"),
         // Registered orderings we have no openly licensed face for. AGENTS.md 1.1 rules out
         // Source Han and Noto CJK (Source Han rebranded), which is why these have none.
-        "GB1" | "CNS1" | "Korea1" | "KR" => Some(""),
+        "GB1" | "CNS1" => Some(""),
         _ => None,
     }
 }
@@ -182,7 +185,7 @@ pub fn substitute(req: &Request<'_>) -> Substitution {
     }
     if let Some(script) = req.ordering.and_then(script_for) {
         // A script we hold a face for; otherwise there is no honest substitute to offer.
-        return match crate::CRAFT_FONTS.iter().find(|f| f.covers(script)) {
+        return match crate::CRAFT_FONTS.iter().chain(&crate::KOREAN_FONTS).find(|f| f.covers(script)) {
             Some(f) => at(Face::Craft(f), Why::ScriptFace),
             None => at(Face::None, Why::NoFaceForScript),
         };
@@ -294,13 +297,25 @@ mod tests {
     fn a_script_with_no_licensed_face_reports_none_rather_than_latin() {
         // The user's Chinese PDF draws nothing. The point of this is that we can now say so,
         // instead of quietly standing Helvetica in and showing the wrong glyphs.
-        for ordering in ["GB1", "CNS1", "Korea1", "KR"] {
+        for ordering in ["GB1", "CNS1"] {
             let s = substitute(&req("SomeCJKFont", false, 0, Some(ordering)));
             assert_eq!(s.face, Face::None, "{ordering}");
             assert_eq!(s.why, Why::NoFaceForScript, "{ordering}");
             assert_eq!(s.face_name(), None);
             assert!(!s.why.is_faithful());
             assert!(s.why.note().contains("no licensed face"), "{ordering}");
+        }
+    }
+
+    #[test]
+    fn korean_is_substituted_by_the_bundled_face_whatever_the_build() {
+        // KnuPdf bundles NanumBarunGothic, so a non-embedded Korean font is never left blank, with
+        // or without craft-fonts.
+        for ordering in ["Korea1", "KR"] {
+            let s = substitute(&req("SomeKoreanFont", false, 0, Some(ordering)));
+            assert_eq!(s.why, Why::ScriptFace, "{ordering}");
+            assert_eq!(s.face_name().as_deref(), Some("NanumBarunGothic Regular"), "{ordering}");
+            assert!(!s.why.is_faithful());
         }
     }
 

@@ -41,6 +41,9 @@
 | `crates/export/src/hwpx.rs` | 한글(HWPX, OWPML) 내보내기 작성기와 테스트. 엔진 `compare.rs`의 `OfficeFormat::Hwpx`, 명령 `export.hwpx`, 도구 목록 항목, 자동화 도구 `doc_export_office`(경로 확장자 `.hwpx`)에 연결 |
 | `crates/engine/src/commands.rs`, `links.rs` | 도움말 메뉴에서 Discord·ArtCraft 링크 숨김, "KnuPdf 정보" |
 | `assets/fonts/KnupdfHangul.ttf`, `OFL-KnupdfHangul.txt` | 나눔고딕 한글 부분, 이름 변경(OFL 조건) |
+| `assets/fonts/NanumBarunGothic.ttf`, `NanumBarunGothicBold.ttf`, `OFL-NanumBarunGothic.txt` | 나눔바른고딕 원본(수정 없음, OFL). PDF에 내장되지 않은 한국어 글꼴(Adobe-Korea1)을 대신 그리는 글꼴. 한글·영문·KS X 1001 한자 포함. 원본 규칙(AGENTS.md §1.4, 글꼴은 craft-fonts에)의 KnuPdf 예외 |
+| `crates/fonts/src/craft.rs`, `fallback.rs` | `KOREAN_FONTS`, `korean_document_font()`. 대체 정책에서 Korea1을 "대체 글꼴 없음"에서 나눔바른고딕으로 변경 |
+| `crates/render/src/raster.rs` | `korean_fallback()`: 내장되지 않은 한국어 CID 글꼴을 나눔바른고딕(굵게는 Bold)으로 그림. 테스트 `non_embedded_korean_cid_fonts_draw_hangul_latin_and_hanja` |
 | `assets/app-icon-knupdf/` | 아이콘 원본(SVG)과 PNG·ICO, 라이선스 |
 | `apps/pdfcraft/build.rs`, `src/main.rs` | exe 아이콘·제품 정보(KnuPdf, 회사명 강원대학교), 창 아이콘 |
 | `apps/pdfcraft-web/index.html` | 웹 탭 제목·아이콘, `lang="ko"` |

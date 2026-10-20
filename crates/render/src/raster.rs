@@ -73,7 +73,7 @@ impl RenderConfig {
         InterpreterSettings {
             ocg_overrides: self.layers.clone(),
             hide_comments: self.hide_comments,
-            font_resolver: Arc::new(move |query| japanese_fallback(query).or_else(|| standard(query))),
+            font_resolver: Arc::new(move |query| japanese_fallback(query).or_else(|| korean_fallback(query)).or_else(|| standard(query))),
             ..InterpreterSettings::default()
         }
     }
@@ -103,6 +103,19 @@ fn japanese_fallback(query: &FontQuery) -> Option<(FontData, u32)> {
             faces.iter().find(|c| c.family == "BIZ UDPGothic" && c.style == style).or(faces.first()).copied()
         }
     }?;
+    Some((Arc::new(face.bytes), 0))
+}
+
+/// KnuPdf: the Korean face for a CID font of the Adobe-Korea1 collection that the PDF doesn't
+/// embed (`HYGoThic-Medium`, or a report printer's `나눔바른고딕` in CP949, …): NanumBarunGothic,
+/// bold for a bold style. Before it, Korea1 had no substitute and its Hangul and hanja drew nothing.
+/// `None` for every other font. Only a Gothic face is bundled, so Myeongjo text draws in Gothic.
+fn korean_fallback(query: &FontQuery) -> Option<(FontData, u32)> {
+    let FontQuery::Fallback(f) = query else { return None };
+    if f.character_collection.as_ref()?.family != CidFamily::AdobeKorea1 {
+        return None;
+    }
+    let face = pdfcraft_fonts::korean_document_font(f.is_bold || f.font_weight >= 600);
     Some((Arc::new(face.bytes), 0))
 }
 
@@ -6357,6 +6370,75 @@ trailer << /Root 1 0 R >>
             // 日本 at 40 pt covers a few hundred dark pixels; a blank or missing-glyph run doesn't.
             assert!(inked > 300, "{base_font}: 日本 is drawn ({inked} dark pixels)");
         }
+    }
+
+    /// A Korean CID font that isn't embedded (Adobe-Korea1 with `UniKS-UCS2-H`, as report
+    /// printers such as OZ Report write it, often naming the face in CP949) drew only its Latin
+    /// letters: Korea1 had no substitute, so every Hangul and hanja glyph was left out. KnuPdf
+    /// bundles NanumBarunGothic, which has Hangul, Latin and KS X 1001 hanja, so all of it draws.
+    #[test]
+    fn non_embedded_korean_cid_fonts_draw_hangul_latin_and_hanja() {
+        // 가나 (Hangul), AB (Latin), 漢 (hanja), each drawn on its own line at 30 pt.
+        let content = "BT /F1 30 Tf 5 75 Td <AC00B098> Tj 0 -32 Td <00410042> Tj 0 -32 Td <6F22> Tj ET";
+        let pdf = |base_font: &str| {
+            format!(
+                "%PDF-1.7
+1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
+3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 100 110] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj
+4 0 obj << /Length {} >> stream
+{content}
+endstream endobj
+5 0 obj << /Type /Font /Subtype /Type0 /BaseFont /{base_font} /Encoding /UniKS-UCS2-H /DescendantFonts [6 0 R] >> endobj
+6 0 obj << /Type /Font /Subtype /CIDFontType2 /BaseFont /{base_font} /CIDSystemInfo << /Registry (Adobe) /Ordering (Korea1) /Supplement 1 >>
+  /FontDescriptor 7 0 R /DW 1000 >> endobj
+7 0 obj << /Type /FontDescriptor /FontName /{base_font} /Flags 6 /FontBBox [0 -120 1000 880] /ItalicAngle 0 /Ascent 880 /Descent -120 /CapHeight 800 /StemV 93 >> endobj
+trailer << /Root 1 0 R >>
+%%EOF",
+                content.len()
+            )
+        };
+        // 나눔바른고딕 in CP949, as the report printer names it, and its bold style.
+        for base_font in ["#B3#AA#B4#AE#B9#D9#B8#A5#B0#ED#B5#F1", "#B3#AA#B4#AE#B9#D9#B8#A5#B0#ED#B5#F1,Bold", "HYGoThic-Medium"] {
+            let mut r = PageRenderer::new(Arc::new(pdf(base_font).into_bytes()), RenderConfig::default());
+            let p = r.render(RenderRequest { page: 0, kind: RequestKind::Pixels, tile: None, scale: 1.0, tag: 0, ..Default::default() });
+            assert!(p.error.is_none(), "{base_font}: {:?}", p.error);
+            let width = p.width as usize;
+            // Dark pixels in each 32-pixel band: line 1 (Hangul) at the top, then Latin, then hanja.
+            let inked = |top: usize| {
+                p.rgba.as_chunks::<4>().0.iter().enumerate().filter(|(i, c)| c[0] < 128 && (top..top + 32).contains(&(i / width))).count()
+            };
+            let (hangul, latin, hanja) = (inked(5), inked(37), inked(69));
+            assert!(hangul > 150, "{base_font}: 가나 is drawn ({hangul} dark pixels)");
+            assert!(latin > 80, "{base_font}: AB is drawn ({latin} dark pixels)");
+            assert!(hanja > 80, "{base_font}: 漢 is drawn ({hanja} dark pixels)");
+        }
+    }
+
+    /// The bold style of a non-embedded Korean font gets the bold face, the rest the regular one.
+    #[test]
+    fn korean_substitute_follows_the_bold_style() {
+        use hayro::hayro_interpret::font::FallbackFontQuery;
+        use hayro::hayro_interpret::hayro_cmap::CharacterCollection;
+        let query = |name: &str| {
+            FontQuery::Fallback(FallbackFontQuery {
+                post_script_name: Some(name.into()),
+                is_bold: name.contains("Bold"),
+                character_collection: Some(CharacterCollection { family: CidFamily::AdobeKorea1, supplement: 1 }),
+                ..FallbackFontQuery::default()
+            })
+        };
+        let face = |name: &str| super::korean_fallback(&query(name)).map(|(data, _)| (*data).as_ref().to_vec());
+        let (regular, bold) = (pdfcraft_fonts::korean_document_font(false), pdfcraft_fonts::korean_document_font(true));
+        assert_eq!(face("SomeKoreanFont"), Some(regular.bytes.to_vec()));
+        assert_eq!(face("SomeKoreanFont,Bold"), Some(bold.bytes.to_vec()));
+        assert_ne!(regular.bytes, bold.bytes);
+        // Other collections are not Korean, and keep their own substitutes.
+        let japanese = FontQuery::Fallback(FallbackFontQuery {
+            character_collection: Some(CharacterCollection { family: CidFamily::AdobeJapan1, supplement: 2 }),
+            ..FallbackFontQuery::default()
+        });
+        assert!(super::korean_fallback(&japanese).is_none());
     }
 
     /// Half-width katakana are common in Japanese documents set in a non-embedded Mincho font
