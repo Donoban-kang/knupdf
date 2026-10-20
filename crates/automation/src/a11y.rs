@@ -708,8 +708,14 @@ impl Automation {
     pub(crate) fn doc_export_office(&self, a: &Args) -> Result<Value> {
         let path = self.resolve(a.str("path")?, true)?;
         let ext = path.extension().map(|e| e.to_string_lossy().into_owned()).unwrap_or_default();
-        let format = pdfcraft_engine::compare::OfficeFormat::from_extension(&ext)
+        let mut format = pdfcraft_engine::compare::OfficeFormat::from_extension(&ext)
             .ok_or_else(|| ToolError::InvalidArgs(format!("unsupported extension {ext:?} (docx, hwpx, pptx, html or rtf)")))?;
+        // KnuPdf: `layout: "keep"` writes Hangul that keeps each page as it is drawn.
+        match a.opt_str("layout")? {
+            None | Some("flow") => {}
+            Some("keep") if format == pdfcraft_engine::compare::OfficeFormat::Hwpx => format = pdfcraft_engine::compare::OfficeFormat::HwpxLayout,
+            Some(other) => return Err(ToolError::InvalidArgs(format!("layout {other:?}: \"flow\", or \"keep\" for a .hwpx path"))),
+        }
         let bytes = self.doc_to_copy(a)?.export_office(format);
         write_atomic(&path, &bytes)?;
         Ok(json!({ "path": path.to_string_lossy(), "bytes": bytes.len(), "format": format.extension() }))

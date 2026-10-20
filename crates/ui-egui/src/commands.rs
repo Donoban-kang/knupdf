@@ -553,6 +553,7 @@ impl PdfCraftApp {
             "form.merge_data" => self.merge_data_dialog(),
             "export.docx" => self.export_office_dialog(pdfcraft_engine::compare::OfficeFormat::Docx),
             "export.hwpx" => self.export_office_dialog(pdfcraft_engine::compare::OfficeFormat::Hwpx),
+            "export.hwpx_layout" => self.export_office_dialog(pdfcraft_engine::compare::OfficeFormat::HwpxLayout),
             "export.pptx" => self.export_office_dialog(pdfcraft_engine::compare::OfficeFormat::Pptx),
             "export.html" => self.export_office_dialog(pdfcraft_engine::compare::OfficeFormat::Html),
             "export.rtf" => self.export_office_dialog(pdfcraft_engine::compare::OfficeFormat::Rtf),

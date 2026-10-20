@@ -126,6 +126,9 @@ impl Session {
 pub enum OfficeFormat {
     Docx,
     Hwpx,
+    /// KnuPdf: Hangul (.hwpx) that keeps each page as it is drawn: every line where it stands,
+    /// in its own font, with the page's rules, boxes and pictures.
+    HwpxLayout,
     Pptx,
     Html,
     Rtf,
@@ -135,7 +138,7 @@ impl OfficeFormat {
     pub fn extension(self) -> &'static str {
         match self {
             OfficeFormat::Docx => "docx",
-            OfficeFormat::Hwpx => "hwpx",
+            OfficeFormat::Hwpx | OfficeFormat::HwpxLayout => "hwpx",
             OfficeFormat::Pptx => "pptx",
             OfficeFormat::Html => "html",
             OfficeFormat::Rtf => "rtf",
@@ -225,18 +228,75 @@ impl crate::Document {
                         })
                     })
                     .collect();
-                pdfcraft_export::Page { width: info.width as f64, height: info.height as f64, blocks, images }
+                pdfcraft_export::Page { width: info.width as f64, height: info.height as f64, blocks, images, lines: Vec::new(), shapes: Vec::new() }
             })
             .collect()
     }
 
+    /// KnuPdf: each page's text line by line and its rules and boxes, for the export that keeps
+    /// pages as they are drawn ([`OfficeFormat::HwpxLayout`]). Pages that cannot be read keep
+    /// what they have.
+    pub(crate) fn add_layout(&self, pages: &mut [pdfcraft_export::Page]) {
+        let Some(cos) = self.editor.as_ref().map(|e| &e.cos) else { return };
+        let mut renderer = pdfcraft_render::PageRenderer::new(
+            self.bytes.clone(),
+            pdfcraft_render::RenderConfig { password: self.password.as_deref().map(Arc::from), ..Default::default() },
+        );
+        for (i, (page, info)) in pages.iter_mut().zip(&self.info.pages).enumerate() {
+            let visible_rect = |r: [f64; 4]| {
+                let a = info.user_to_view(r[0] as f32, r[1] as f32);
+                let b = info.user_to_view(r[2] as f32, r[3] as f32);
+                [a[0].min(b[0]) as f64, (info.height - a[1].max(b[1])) as f64, a[0].max(b[0]) as f64, (info.height - a[1].min(b[1])) as f64]
+            };
+            let crop_width = f64::from(info.crop[2] - info.crop[0]);
+            let display_width = f64::from(if info.rotation % 180 == 0 { info.width } else { info.height });
+            let unit = if crop_width > 0.0 && crop_width.is_finite() && display_width.is_finite() { display_width / crop_width } else { 1.0 };
+            page.lines = pdfcraft_edit::text_lines(cos, i)
+                .unwrap_or_default()
+                .into_iter()
+                .filter(|l| !l.text.trim().is_empty())
+                .map(|l| pdfcraft_export::TextLine {
+                    rect: visible_rect(l.rect),
+                    size: l.size * unit,
+                    // `ABCDEF+` marks a subset; the family is what follows.
+                    font: l.base_font.split_once('+').map_or(l.base_font.as_str(), |(_, f)| f).to_owned(),
+                    bold: l.bold,
+                    italic: l.italic,
+                    color: l.color,
+                    text: l.text,
+                })
+                .collect();
+            let height = f64::from(info.height);
+            let up = |p: [f64; 2]| [p[0], height - p[1]];
+            page.shapes = renderer
+                .page_shapes(i)
+                .unwrap_or_default()
+                .into_iter()
+                .map(|s| match s {
+                    pdfcraft_render::VectorShape::Line { from, to, width, color } => {
+                        pdfcraft_export::Shape::Line { from: up(from), to: up(to), width, color }
+                    }
+                    pdfcraft_render::VectorShape::Fill { rect, color } => {
+                        pdfcraft_export::Shape::Fill { rect: [rect[0], height - rect[3], rect[2], height - rect[1]], color }
+                    }
+                })
+                .collect();
+        }
+    }
+
     /// The document as a Word, PowerPoint, Hangul (HWPX), HTML or RTF file.
     pub fn export_office(&self, format: OfficeFormat) -> Vec<u8> {
-        let pages = self.export_pages();
+        let mut pages = self.export_pages();
+        // KnuPdf: both Hangul exports read the page's text lines and rules (ruled tables,
+        // paragraphs split at list marks); the other formats keep the plain text blocks.
+        if matches!(format, OfficeFormat::Hwpx | OfficeFormat::HwpxLayout) {
+            self.add_layout(&mut pages);
+        }
         let title = self.info.title.clone().unwrap_or_else(|| self.name.trim_end_matches(".pdf").to_string());
         match format {
             OfficeFormat::Docx => pdfcraft_export::docx(&pages, &title),
             OfficeFormat::Hwpx => pdfcraft_export::hwpx(&pages, &title),
+            OfficeFormat::HwpxLayout => pdfcraft_export::hwpx_layout(&pages, &title),
             OfficeFormat::Pptx => pdfcraft_export::pptx(&pages, &title),
             OfficeFormat::Html => pdfcraft_export::html(&pages, &title).into_bytes(),
             OfficeFormat::Rtf => pdfcraft_export::rtf(&pages).into_bytes(),

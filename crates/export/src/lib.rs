@@ -10,9 +10,10 @@
 
 mod hwpx;
 mod pptx;
+mod ruled;
 mod zip;
 
-pub use hwpx::hwpx;
+pub use hwpx::{hwpx, hwpx_layout};
 pub use pptx::pptx;
 pub use zip::Zip;
 
@@ -82,6 +83,35 @@ pub struct Page {
     pub height: f64,
     pub blocks: Vec<Block>,
     pub images: Vec<Image>,
+    /// KnuPdf: the page's text line by line, where it is drawn, for layouts that keep the page
+    /// as it is (the Hangul "keep the original look" export). Empty when not gathered.
+    pub lines: Vec<TextLine>,
+    /// KnuPdf: the straight lines and filled rectangles the page draws (table rules, boxes).
+    pub shapes: Vec<Shape>,
+}
+
+/// KnuPdf: one line of text as the page draws it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct TextLine {
+    pub text: String,
+    /// [x0, y0, x1, y1] on the displayed page in points (y up).
+    pub rect: [f64; 4],
+    /// Font size in points.
+    pub size: f64,
+    /// The font's name without a subset tag (`MalgunGothicBold`, `휴먼명조`).
+    pub font: String,
+    pub bold: bool,
+    pub italic: bool,
+    /// Text fill colour as sRGB components in 0..=1.
+    pub color: [f64; 3],
+}
+
+/// KnuPdf: a straight line or filled rectangle the page draws, on the displayed page in points
+/// (y up).
+#[derive(Clone, Debug, PartialEq)]
+pub enum Shape {
+    Line { from: [f64; 2], to: [f64; 2], width: f64, color: [f64; 3] },
+    Fill { rect: [f64; 4], color: [f64; 3] },
 }
 
 /// One cell of a detected table. `span` is how many grid columns the cell covers (a header
@@ -95,6 +125,10 @@ pub struct Cell {
     /// Text fill colour as sRGB components in 0..=1.
     pub color: [f64; 3],
     pub span: usize,
+    /// KnuPdf: how many grid rows the cell covers (a ruled table's vertically merged cell).
+    pub rowspan: usize,
+    /// KnuPdf: the cell's background (a ruled table's shaded cell), as sRGB in 0..=1.
+    pub fill: Option<[f64; 3]>,
 }
 
 /// A table detected from the page's text layout: rows of cells, and the left edge of each
@@ -104,11 +138,15 @@ pub struct Table {
     pub rect: [f64; 4],
     pub cols: Vec<f64>,
     pub rows: Vec<Vec<Cell>>,
+    /// KnuPdf: for a table the page draws with rules, the rows' edges top to bottom (y up; one
+    /// more than the rows). Empty for a table inferred from text alignment alone.
+    pub row_edges: Vec<f64>,
 }
 
 /// What goes into the output, in order.
 enum Item<'a> {
-    Para(&'a Block, u8),
+    /// Borrowed from the page, or (KnuPdf) built from its text lines.
+    Para(std::borrow::Cow<'a, Block>, u8),
     /// Owned: tables are detected per page inside [`items`], so they cannot borrow.
     Table(Table),
     Img(&'a Image),
@@ -245,7 +283,16 @@ pub(crate) fn tables(blocks: &[Block]) -> (Vec<Table>, Vec<bool>) {
                 let b = &blocks[bi];
                 let Some(slot) = edges.iter().position(|e| (*e - b.rect[0]).abs() <= COL_TOL) else { continue };
                 let span = edges[slot + 1..].iter().filter(|e| **e > b.rect[0] + COL_TOL && **e < b.rect[2] - COL_TOL).count() + 1;
-                let cell = Cell { text: b.text.trim().to_string(), size: b.size, bold: b.bold, italic: b.italic, color: b.color, span };
+                let cell = Cell {
+                    text: b.text.trim().to_string(),
+                    size: b.size,
+                    bold: b.bold,
+                    italic: b.italic,
+                    color: b.color,
+                    span,
+                    rowspan: 1,
+                    fill: None,
+                };
                 match &mut slots[slot] {
                     Some(c) => {
                         c.text.push(' ');
@@ -266,7 +313,16 @@ pub(crate) fn tables(blocks: &[Block]) -> (Vec<Table>, Vec<bool>) {
                     }
                     None => {
                         column += 1;
-                        materialized.push(Cell { text: String::new(), size: 11.0, bold: false, italic: false, color: [0.0; 3], span: 1 });
+                        materialized.push(Cell {
+                            text: String::new(),
+                            size: 11.0,
+                            bold: false,
+                            italic: false,
+                            color: [0.0; 3],
+                            span: 1,
+                            rowspan: 1,
+                            fill: None,
+                        });
                     }
                 }
             }
@@ -281,7 +337,7 @@ pub(crate) fn tables(blocks: &[Block]) -> (Vec<Table>, Vec<bool>) {
             right,
             used.iter().map(|&i| blocks[i].rect[3]).fold(f64::MIN, f64::max),
         ];
-        out.push(Table { rect, cols: edges, rows: rows_out });
+        out.push(Table { rect, cols: edges, rows: rows_out, row_edges: Vec::new() });
     };
     // Runs of consecutive multi-column rows are tables. Rows on either side of a run that
     // hold a single cell wide enough to span two columns (a header band, a totals row) join
@@ -337,6 +393,15 @@ fn items(pages: &[Page]) -> Vec<Item<'_>> {
         if i > 0 {
             out.push(Item::PageBreak);
         }
+        // KnuPdf: a page whose text lines and rules were gathered (the Hangul export) is built
+        // from them: tables where the page rules them, paragraphs line by line.
+        if !p.lines.is_empty() {
+            let mut parts = ruled::items(p, body);
+            parts.extend(p.images.iter().map(|im| (im.rect[3], im.rect[0], Item::Img(im))));
+            parts.sort_by(|a, b| b.0.total_cmp(&a.0).then(a.1.total_cmp(&b.1)));
+            out.extend(parts.into_iter().map(|x| x.2));
+            continue;
+        }
         let (tables, consumed) = tables(&p.blocks);
         // Blocks and images by their top edge, top to bottom.
         let mut parts: Vec<(f64, f64, Item)> = p
@@ -344,7 +409,7 @@ fn items(pages: &[Page]) -> Vec<Item<'_>> {
             .iter()
             .enumerate()
             .filter(|(bi, _)| !consumed.get(*bi).copied().unwrap_or(false))
-            .map(|(_, b)| (b.rect[3], b.rect[0], Item::Para(b, level(b, body))))
+            .map(|(_, b)| (b.rect[3], b.rect[0], Item::Para(std::borrow::Cow::Borrowed(b), level(b, body))))
             .collect();
         parts.extend(tables.into_iter().map(|t| (t.rect[3], t.rect[0], Item::Table(t))));
         parts.extend(p.images.iter().map(|im| (im.rect[3], im.rect[0], Item::Img(im))));
@@ -926,6 +991,8 @@ mod tests {
             rotation: 0.0,
         };
         Page {
+            lines: Vec::new(),
+            shapes: Vec::new(),
             width: 612.0,
             height: 792.0,
             blocks: vec![
@@ -1167,6 +1234,8 @@ mod tests {
             rotation: 0.0,
         };
         Page {
+            lines: Vec::new(),
+            shapes: Vec::new(),
             width: 612.0,
             height: 792.0,
             blocks: vec![
@@ -1262,6 +1331,8 @@ mod tests {
     fn word_opens_tables_up_to_its_column_limit() {
         // Rows of short numbers on a regular grid, n columns wide.
         let grid = |n: usize| Page {
+            lines: Vec::new(),
+            shapes: Vec::new(),
             width: 1500.0,
             height: 792.0,
             blocks: (0..3)
@@ -1302,6 +1373,8 @@ mod tests {
             rotation: 0.0,
         };
         let p = Page {
+            lines: Vec::new(),
+            shapes: Vec::new(),
             width: 612.0,
             height: 792.0,
             blocks: vec![

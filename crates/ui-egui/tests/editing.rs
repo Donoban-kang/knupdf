@@ -2198,6 +2198,7 @@ fn copying_out_of_a_document_honours_its_security() {
         "export.text",
         "export.docx",
         "export.hwpx",
+        "export.hwpx_layout",
         "export.pptx",
         "export.html",
         "export.rtf",

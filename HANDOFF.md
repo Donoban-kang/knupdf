@@ -18,7 +18,7 @@
 | 내려받기 | `downloads/`에 설치 파일·zip을 커밋해 README에서 바로 받게 함(임시). GitHub Releases는 **미등록**(6절). Releases에 올린 뒤에는 `downloads/`의 파일을 지우고 링크를 Releases로 바꾸는 것을 권장 |
 | 웹판 | claude.ai Artifact로 비공개 게시: https://claude.ai/artifact/CzyCoaMnWXithtxtsuF2hq |
 | 한국 개인정보 가리기 | 완료. PDF 가리기 → 텍스트 찾아 가리기 → 패턴 → "한국 개인정보 전체"(기본값) 또는 항목별 |
-| 한글(HWPX) 내보내기 | 완료. PDF 내보내기 → 내보낼 형식 → "한글 (.hwpx)". **실제 한컴오피스 한글에서는 아직 미시험**(구조 검사 도구로만 확인) |
+| 한글(HWPX) 내보내기 | 완료. PDF 내보내기 → 내보낼 형식 → "한글 (.hwpx)"(고쳐 쓰기 좋은 흐름 방식) 또는 "한글 (.hwpx) - 원본 모양 그대로"(PDF와 같은 배치). **실제 한컴오피스 한글에서는 아직 미시험**(구조 검사 도구와 자체 미리보기로만 확인) |
 | 다음 할 일 | 9절 |
 
 ## 2. 저장소 구조와 기록
@@ -156,6 +156,10 @@ git commit -am "Sync PdfCraft upstream to <새 원본 커밋>"
    - 명령줄로 확인: `pdfcraft-cli run --script steps.json` (doc_open → redact_mark `pattern: kr-all` → redact_apply → doc_save)
 4. **CI 정리**: 원본 GitHub Actions 중 KnuPdf에 필요 없는 것(macOS·FreeBSD·서명 등)을 끄고, Windows 설치 파일을 자동으로 만드는 작업을 추가합니다.
 5. **한글(HWPX) 내보내기 점검**(F-11): 한컴오피스 한글 2018 이상에서 열기·표·그림·쪽 나눔 확인. 쪽마다 크기가 다른 PDF는 첫 쪽 크기로 통일되는 한계 개선(구역 나누기)
+   - 변환 방식이 두 가지입니다.
+     - **흐름 방식**(`export.hwpx`): 고쳐 쓰기 좋은 문서입니다. 괘선 표는 선을 읽어 병합 셀·행 높이·배경색을 살리고, 본문 줄은 목록 기호(-, ※, ○, 가., 1. 등)에서 문단을 나눕니다. 코드는 `crates/export/src/ruled.rs`와 `hwpx.rs`의 `Section::table`입니다.
+     - **원본 모양 그대로**(`export.hwpx_layout`, 자동화 `doc_export_office` `layout: "keep"`): 줄마다 글상자, 선·칠한 사각형·그림을 종이 기준 절대 위치에 놓습니다(`hwpx.rs`의 `Layout`). 선은 `crates/render/src/vectors.rs`에서 모읍니다.
+   - 두 방식 모두 한컴오피스 실물 확인이 아직 남았습니다. 특히 원본 모양 방식은 글상자 안 글자 폭(글꼴 차이)을 봐야 합니다.
 6. **직인 찍기**(F-03), **한국어 날짜 형식**(F-04).
 7. **화면 개편**(F-06): 강원대 블루 리본형 UI 시안을 기준으로 합니다.
 8. **코드 서명**(F-07), **한글 OCR 조사**(F-05).

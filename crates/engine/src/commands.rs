@@ -323,6 +323,8 @@ pub const COMMANDS: &[CommandSpec] = &[
     c("export.text", "Export to text…", FILE, None, Copying, "type"),
     c("export.docx", "Export to Word…", FILE, None, Copying, "file-text"),
     c("export.hwpx", "Export to Hangul (HWPX)…", FILE, None, Copying, "file-text"),
+    // KnuPdf: every line, rule and box where the page draws it, for a copy that looks the same.
+    c("export.hwpx_layout", "Export to Hangul (HWPX), Keeping the Page Layout…", FILE, None, Copying, "file-text"),
     c("export.pptx", "Export to PowerPoint…", FILE, None, Copying, "presentation"),
     c("export.html", "Export to HTML…", FILE, None, Copying, "file-symlink"),
     c("export.rtf", "Export to RTF…", FILE, None, Copying, "file-text"),

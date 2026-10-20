@@ -15,6 +15,7 @@ mod reading;
 mod structure;
 pub mod text;
 pub mod transition;
+mod vectors;
 
 pub use inspect::{
     Annotation, Attachment, AttachmentSource, DestView, DocInfo, Field, FieldKind, FontInfo, Layer, LayerOp, Link, LinkTarget, OutlineItem, PageInfo,
@@ -27,6 +28,7 @@ pub use raster::{
 };
 pub use reading::{ReadingColors, ReadingParams};
 pub use text::{PageText, TextGlyph};
+pub use vectors::VectorShape;
 
 /// Errors surfaced to the user when a document cannot be opened.
 #[derive(Debug, thiserror::Error)]
