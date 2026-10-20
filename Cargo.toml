@@ -115,3 +115,6 @@ lopdf = { path = "vendor/lopdf" }
 winit = { path = "vendor/winit" }
 egui-wgpu = { path = "vendor/egui-wgpu" }
 vello_common = { path = "vendor/vello_common" }
+# The Windows print path (through craft-print): printed text no longer falls to 150 dpi.
+[patch."https://github.com/storytold/winprint.rs"]
+winprint = { path = "vendor/winprint" }
