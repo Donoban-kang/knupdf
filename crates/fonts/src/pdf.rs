@@ -81,6 +81,17 @@ fn dict(doc: &Document, o: Option<&Object>) -> Option<Dict> {
 
 /// Whether `base_font` (subset tag allowed) names a legacy Indic font family that is laid out in
 /// visual order (Kruti Dev, DevLys, Chanakya, Shusha, Shivaji, Walkman, Akruti, APS-DV, DV-TT…).
+/// A font name as text. Names are bytes; Korean software writes them in CP949 (`나눔바른고딕`,
+/// `휴먼명조`), which is read as such when the bytes are not UTF-8 and are valid CP949. Anything
+/// else keeps the lossy UTF-8 reading.
+pub fn font_name(bytes: &[u8]) -> String {
+    if let Ok(s) = std::str::from_utf8(bytes) {
+        return s.to_owned();
+    }
+    let (text, had_errors) = encoding_rs::EUC_KR.decode_without_bom_handling(bytes);
+    if had_errors { String::from_utf8_lossy(bytes).into_owned() } else { text.into_owned() }
+}
+
 fn legacy_indic_font(base_font: &str) -> bool {
     let name =
         base_font.split_once('+').filter(|(tag, _)| tag.len() == 6 && tag.bytes().all(|b| b.is_ascii_uppercase())).map_or(base_font, |(_, n)| n);
@@ -585,12 +596,12 @@ impl Metrics {
         let mut m = Self::read_metrics(doc, font);
         let base = font
             .name(b"BaseFont")
-            .map(|name| String::from_utf8_lossy(name).into_owned())
+            .map(font_name)
             .or_else(|| {
                 (font.name(b"Subtype") == Some(b"Type3"))
                     .then(|| dict(doc, font.get(b"FontDescriptor")))
                     .flatten()
-                    .and_then(|d| d.name(b"FontName").map(|name| String::from_utf8_lossy(name).into_owned()))
+                    .and_then(|d| d.name(b"FontName").map(font_name))
             })
             .unwrap_or_default();
         m.subset = base.len() > 7 && base.as_bytes()[6] == b'+' && base[..6].bytes().all(|b| b.is_ascii_uppercase());
@@ -1173,6 +1184,17 @@ mod tests {
     use pdfcraft_cos::{Dict, Document, Object, Stream};
 
     use super::*;
+
+    /// Korean software names fonts in CP949: `휴먼명조` and `나눔바른고딕,Bold` read as written,
+    /// not as replacement characters. UTF-8 names and bytes that are neither stay as before.
+    #[test]
+    fn cp949_font_names_are_read_as_korean() {
+        assert_eq!(font_name(b"\xc8\xde\xb8\xd5\xb8\xed\xc1\xb6"), "휴먼명조");
+        assert_eq!(font_name(b"ABCDEF+\xb3\xaa\xb4\xae\xb9\xd9\xb8\xa5\xb0\xed\xb5\xf1,Bold"), "ABCDEF+나눔바른고딕,Bold");
+        assert_eq!(font_name(b"MalgunGothic"), "MalgunGothic");
+        assert_eq!(font_name("맑은고딕".as_bytes()), "맑은고딕");
+        assert_eq!(font_name(b"\xff\xff"), "\u{fffd}\u{fffd}");
+    }
 
     /// A font whose ranges cover a few low codes keeps tables that size, not a fixed 64k-entry one.
     #[test]

@@ -12,7 +12,7 @@ mod hwpx;
 mod pptx;
 mod zip;
 
-pub use hwpx::hwpx;
+pub use hwpx::{hwpx, hwpx_layout};
 pub use pptx::pptx;
 pub use zip::Zip;
 
@@ -82,6 +82,35 @@ pub struct Page {
     pub height: f64,
     pub blocks: Vec<Block>,
     pub images: Vec<Image>,
+    /// KnuPdf: the page's text line by line, where it is drawn, for layouts that keep the page
+    /// as it is (the Hangul "keep the original look" export). Empty when not gathered.
+    pub lines: Vec<TextLine>,
+    /// KnuPdf: the straight lines and filled rectangles the page draws (table rules, boxes).
+    pub shapes: Vec<Shape>,
+}
+
+/// KnuPdf: one line of text as the page draws it.
+#[derive(Clone, Debug, PartialEq)]
+pub struct TextLine {
+    pub text: String,
+    /// [x0, y0, x1, y1] on the displayed page in points (y up).
+    pub rect: [f64; 4],
+    /// Font size in points.
+    pub size: f64,
+    /// The font's name without a subset tag (`MalgunGothicBold`, `휴먼명조`).
+    pub font: String,
+    pub bold: bool,
+    pub italic: bool,
+    /// Text fill colour as sRGB components in 0..=1.
+    pub color: [f64; 3],
+}
+
+/// KnuPdf: a straight line or filled rectangle the page draws, on the displayed page in points
+/// (y up).
+#[derive(Clone, Debug, PartialEq)]
+pub enum Shape {
+    Line { from: [f64; 2], to: [f64; 2], width: f64, color: [f64; 3] },
+    Fill { rect: [f64; 4], color: [f64; 3] },
 }
 
 /// One cell of a detected table. `span` is how many grid columns the cell covers (a header
@@ -926,6 +955,8 @@ mod tests {
             rotation: 0.0,
         };
         Page {
+            lines: Vec::new(),
+            shapes: Vec::new(),
             width: 612.0,
             height: 792.0,
             blocks: vec![
@@ -1167,6 +1198,8 @@ mod tests {
             rotation: 0.0,
         };
         Page {
+            lines: Vec::new(),
+            shapes: Vec::new(),
             width: 612.0,
             height: 792.0,
             blocks: vec![
@@ -1262,6 +1295,8 @@ mod tests {
     fn word_opens_tables_up_to_its_column_limit() {
         // Rows of short numbers on a regular grid, n columns wide.
         let grid = |n: usize| Page {
+            lines: Vec::new(),
+            shapes: Vec::new(),
             width: 1500.0,
             height: 792.0,
             blocks: (0..3)
@@ -1302,6 +1337,8 @@ mod tests {
             rotation: 0.0,
         };
         let p = Page {
+            lines: Vec::new(),
+            shapes: Vec::new(),
             width: 612.0,
             height: 792.0,
             blocks: vec![

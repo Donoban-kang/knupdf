@@ -3736,6 +3736,47 @@ fn exporting_office_files_keeps_images() {
     assert!(String::from_utf8(d.export_office(compare::OfficeFormat::Html)).unwrap().contains("data:image/png;base64,"));
 }
 
+/// KnuPdf: the Hangul export that keeps the layout gathers each page's lines of text (where
+/// they are, in which font) and its rules, in the displayed page's points with y up.
+#[test]
+fn kept_layout_export_gathers_lines_and_rules() {
+    let content = "BT /F1 12 Tf 72 700 Td (Rule below) Tj ET 1 w 72 690 m 300 690 l S 0.8 g 72 600 200 20 re f";
+    let pdf = format!(
+        "%PDF-1.7
+1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
+3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj
+4 0 obj << /Length {} >> stream
+{content}
+endstream endobj
+5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> endobj
+trailer << /Root 1 0 R >>
+%%EOF",
+        content.len()
+    );
+    let mut s = Session::new();
+    let id = s.open("layout.pdf", None, Arc::new(pdf.into_bytes()), None).unwrap();
+    let d = s.get(id).unwrap();
+    let mut pages = d.export_pages();
+    assert!(pages[0].lines.is_empty() && pages[0].shapes.is_empty(), "the flowing exports gather neither");
+    d.add_layout(&mut pages);
+    let line = pages[0].lines.iter().find(|l| l.text.contains("Rule below")).expect("the text line");
+    assert_eq!(line.font, "Helvetica-Bold");
+    assert!((line.rect[0] - 72.0).abs() < 0.5 && line.rect[1] > 690.0 && line.rect[1] < 705.0, "{:?}", line.rect);
+    let rule = pages[0]
+        .shapes
+        .iter()
+        .any(|sh| matches!(sh, pdfcraft_export::Shape::Line { from, to, .. } if (from[1] - 690.0).abs() < 0.01 && (to[0] - 300.0).abs() < 0.01));
+    assert!(rule, "{:?}", pages[0].shapes);
+    let bar = pages[0]
+        .shapes
+        .iter()
+        .any(|sh| matches!(sh, pdfcraft_export::Shape::Fill { rect, .. } if (rect[1] - 600.0).abs() < 0.01 && (rect[3] - 620.0).abs() < 0.01));
+    assert!(bar, "{:?}", pages[0].shapes);
+    let hwpx = d.export_office(compare::OfficeFormat::HwpxLayout);
+    assert!(hwpx.starts_with(b"PK") && hwpx.windows(19).any(|w| w == b"Contents/section0.x"));
+}
+
 /// #314: a page whose content is drawn through a form XObject exports its text (the file from
 /// the report: no xref table, wrong stream lengths).
 #[test]

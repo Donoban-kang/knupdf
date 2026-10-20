@@ -454,6 +454,14 @@ impl PageRenderer {
             .map_err(|e| format!("text extraction failed: {}", panic_message(&e)))?
     }
 
+    /// KnuPdf: the straight lines and filled rectangles one page draws, in displayed points
+    /// (origin top left), for exports that redraw them. Never panics.
+    pub fn page_shapes(&mut self, page: usize) -> Result<Vec<crate::VectorShape>, String> {
+        let pdf = self.pdf.as_ref().ok_or("the document could not be parsed")?;
+        catch_unwind(AssertUnwindSafe(|| crate::vectors::page_shapes(pdf, page, &self.settings)))
+            .map_err(|e| format!("reading the page's shapes failed: {}", panic_message(&e)))?
+    }
+
     /// Render one page. Never panics.
     pub fn render(&mut self, req: RenderRequest) -> RenderedPage {
         let start = Stopwatch::start();
