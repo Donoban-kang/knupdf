@@ -287,7 +287,9 @@ impl crate::Document {
     /// The document as a Word, PowerPoint, Hangul (HWPX), HTML or RTF file.
     pub fn export_office(&self, format: OfficeFormat) -> Vec<u8> {
         let mut pages = self.export_pages();
-        if format == OfficeFormat::HwpxLayout {
+        // KnuPdf: both Hangul exports read the page's text lines and rules (ruled tables,
+        // paragraphs split at list marks); the other formats keep the plain text blocks.
+        if matches!(format, OfficeFormat::Hwpx | OfficeFormat::HwpxLayout) {
             self.add_layout(&mut pages);
         }
         let title = self.info.title.clone().unwrap_or_else(|| self.name.trim_end_matches(".pdf").to_string());

@@ -114,12 +114,20 @@ const LAYOUT_PARA: usize = 2;
 /// The flowing export's one face.
 const BODY_FACE: &str = "함초롬바탕";
 
-fn header(chars: &CharShapes) -> String {
-    header_with(chars, &[BODY_FACE.to_owned()])
+fn header(chars: &CharShapes, fills: &[[u8; 3]]) -> String {
+    header_with(chars, &[BODY_FACE.to_owned()], fills)
 }
 
-/// The header part, with `faces` as the font list every character shape refers into.
-fn header_with(chars: &CharShapes, faces: &[String]) -> String {
+/// Border fill of a ruled table's cells: solid rules all round.
+const RULED_BORDER: usize = 3;
+/// Most distinct cell shades one document keeps; further shades reuse the plain ruled border.
+const MAX_CELL_FILLS: usize = 256;
+/// Largest table grid whose row spans are tracked; a bigger one is written without them.
+const MAX_GRID_CELLS: usize = 1_000_000;
+
+/// The header part, with `faces` as the font list every character shape refers into and
+/// `fills` the cell shades border fills `RULED_BORDER + 1 + i` paint.
+fn header_with(chars: &CharShapes, faces: &[String], fills: &[[u8; 3]]) -> String {
     let mut s = format!(
         "{XML_DECL}<hh:head {NS} version=\"1.5\" secCnt=\"1\"><hh:beginNum page=\"1\" footnote=\"1\" endnote=\"1\" pic=\"1\" tbl=\"1\" equation=\"1\"/>\
 <hh:refList><hh:fontfaces itemCnt=\"{}\">",
@@ -150,14 +158,29 @@ fn header_with(chars: &CharShapes, faces: &[String]) -> String {
             .collect::<String>()
     };
     // 1: no border (pages, table cells: alignment alone cannot prove the PDF drew rules);
-    // 2: no border and no fill (character and paragraph shapes).
+    // 2: no border and no fill (character and paragraph shapes);
+    // 3: solid rules (cells of a table the page draws with rules); 4..: the same, shaded.
+    let ruled = |id: usize, face: &str| {
+        format!(
+            "<hh:borderFill id=\"{id}\" threeD=\"0\" shadow=\"0\" centerLine=\"NONE\" breakCellSeparateLine=\"0\"><hh:slash type=\"NONE\" Crooked=\"0\" isCounter=\"0\"/><hh:backSlash type=\"NONE\" Crooked=\"0\" isCounter=\"0\"/>{}<hh:diagonal type=\"SOLID\" width=\"0.1 mm\" color=\"#000000\"/>\
+<hc:fillBrush><hc:winBrush faceColor=\"{face}\" hatchColor=\"#999999\" alpha=\"0\"/></hc:fillBrush></hh:borderFill>",
+            border("SOLID")
+        )
+    };
+    let fills = fills.get(..fills.len().min(MAX_CELL_FILLS)).unwrap_or_default();
     s.push_str(&format!(
-        "</hh:fontfaces><hh:borderFills itemCnt=\"2\">\
-<hh:borderFill id=\"1\" threeD=\"0\" shadow=\"0\" centerLine=\"NONE\" breakCellSeparateLine=\"0\"><hh:slash type=\"NONE\" Crooked=\"0\" isCounter=\"0\"/><hh:backSlash type=\"NONE\" Crooked=\"0\" isCounter=\"0\"/>{0}<hh:diagonal type=\"SOLID\" width=\"0.1 mm\" color=\"#000000\"/></hh:borderFill>\
-<hh:borderFill id=\"2\" threeD=\"0\" shadow=\"0\" centerLine=\"NONE\" breakCellSeparateLine=\"0\"><hh:slash type=\"NONE\" Crooked=\"0\" isCounter=\"0\"/><hh:backSlash type=\"NONE\" Crooked=\"0\" isCounter=\"0\"/>{0}<hh:diagonal type=\"SOLID\" width=\"0.1 mm\" color=\"#000000\"/>\
-<hc:fillBrush><hc:winBrush faceColor=\"none\" hatchColor=\"#999999\" alpha=\"0\"/></hc:fillBrush></hh:borderFill></hh:borderFills>",
-        border("NONE")
+        "</hh:fontfaces><hh:borderFills itemCnt=\"{count}\">\
+<hh:borderFill id=\"1\" threeD=\"0\" shadow=\"0\" centerLine=\"NONE\" breakCellSeparateLine=\"0\"><hh:slash type=\"NONE\" Crooked=\"0\" isCounter=\"0\"/><hh:backSlash type=\"NONE\" Crooked=\"0\" isCounter=\"0\"/>{none}<hh:diagonal type=\"SOLID\" width=\"0.1 mm\" color=\"#000000\"/></hh:borderFill>\
+<hh:borderFill id=\"2\" threeD=\"0\" shadow=\"0\" centerLine=\"NONE\" breakCellSeparateLine=\"0\"><hh:slash type=\"NONE\" Crooked=\"0\" isCounter=\"0\"/><hh:backSlash type=\"NONE\" Crooked=\"0\" isCounter=\"0\"/>{none}<hh:diagonal type=\"SOLID\" width=\"0.1 mm\" color=\"#000000\"/>\
+<hc:fillBrush><hc:winBrush faceColor=\"none\" hatchColor=\"#999999\" alpha=\"0\"/></hc:fillBrush></hh:borderFill>",
+        count = 3 + fills.len(),
+        none = border("NONE")
     ));
+    s.push_str(&ruled(RULED_BORDER, "none"));
+    for (i, [r, g, b]) in fills.iter().enumerate() {
+        s.push_str(&ruled(RULED_BORDER + 1 + i, &format!("#{r:02X}{g:02X}{b:02X}")));
+    }
+    s.push_str("</hh:borderFills>");
     s.push_str(&chars.xml());
     s.push_str("<hh:tabProperties itemCnt=\"1\"><hh:tabPr id=\"0\" autoTabLeft=\"0\" autoTabRight=\"0\"/></hh:tabProperties>");
     s.push_str(&format!(
@@ -245,6 +268,8 @@ struct Section<'a> {
     /// Text width in HWPUNIT (pictures and tables are scaled to fit it).
     text_w: i64,
     prev_text: String,
+    /// Shades of ruled table cells, in border fill order after [`RULED_BORDER`].
+    fills: Vec<[u8; 3]>,
 }
 
 impl<'a> Section<'a> {
@@ -282,6 +307,19 @@ impl<'a> Section<'a> {
         self.para(usize::from(level > 0), &runs);
     }
 
+    /// The border fill of a ruled cell shaded `color`, added to the header on first use.
+    fn fill_id(&mut self, color: [f64; 3]) -> usize {
+        let rgb = crate::rgb8(color);
+        match self.fills.iter().position(|f| *f == rgb) {
+            Some(i) => RULED_BORDER + 1 + i,
+            None if self.fills.len() < MAX_CELL_FILLS => {
+                self.fills.push(rgb);
+                RULED_BORDER + self.fills.len()
+            }
+            None => RULED_BORDER,
+        }
+    }
+
     fn table(&mut self, t: &Table) {
         let cols = t.cols.len().max(1);
         let mut edges = t.cols.clone();
@@ -295,33 +333,64 @@ impl<'a> Section<'a> {
                 *w = (*w as i128 * self.text_w as i128 / total as i128) as i64;
             }
         }
+        // A table the page draws with rules keeps its row heights, merged cells, rules and shades.
+        let ruled = t.row_edges.len() == t.rows.len().saturating_add(1) && !t.rows.is_empty();
+        let heights: Vec<i64> = if ruled {
+            t.row_edges.windows(2).map(|e| unit(e[0] - e[1], 600, 40_000)).collect()
+        } else {
+            t.rows.iter().map(|row| row.iter().map(|c| unit(c.size * 1.6, 1_000, 40_000)).max().unwrap_or(1_000).saturating_add(282)).collect()
+        };
+        let nrows = t.rows.len();
+        // Grid cells a cell from a row above already covers; untracked (no row spans) when huge.
+        let mut covered = if nrows.saturating_mul(cols) <= MAX_GRID_CELLS { vec![false; nrows * cols] } else { Vec::new() };
         let mut rows = String::new();
-        let mut height = 0i64;
+        let height: i64 = heights.iter().fold(0i64, |a, h| a.saturating_add(*h));
         let id = self.next_id;
         self.next_id = self.next_id.saturating_add(1);
         for (r, row) in t.rows.iter().enumerate() {
-            let row_h = row.iter().map(|c| unit(c.size * 1.6, 1_000, 40_000)).max().unwrap_or(1_000).saturating_add(282);
-            height = height.saturating_add(row_h);
             rows.push_str("<hp:tr>");
+            let free = |covered: &[bool], c: usize| !covered.get(r * cols + c).copied().unwrap_or(false);
             let mut col = 0usize;
-            let mut cells: Vec<(Option<&crate::Cell>, usize)> = row.iter().map(|c| (Some(c), c.span.max(1))).collect();
-            let used: usize = cells.iter().map(|c| c.1).sum();
-            cells.extend((used..cols).map(|_| (None, 1)));
-            for (cell, span) in cells {
+            let mut cells = row.iter().map(Some).chain(std::iter::repeat(None));
+            loop {
+                while col < cols && !free(&covered, col) {
+                    col += 1;
+                }
                 if col >= cols {
                     break;
                 }
-                let span = span.min(cols - col);
+                let cell = cells.next().flatten();
+                // A cell stops at the next covered column; empty filler cells are one column wide.
+                let room = (col..cols).take_while(|c| free(&covered, *c)).count();
+                let span = cell.map_or(1, |c| c.span.max(1)).min(room).max(1);
+                let rowspan = if covered.is_empty() { 1 } else { cell.map_or(1, |c| c.rowspan.max(1)).min(nrows - r) };
+                for rr in r..r + rowspan {
+                    for cc in col..col + span {
+                        if let Some(slot) = covered.get_mut(rr * cols + cc) {
+                            *slot = true;
+                        }
+                    }
+                }
                 let w: i64 = widths.iter().skip(col).take(span).sum();
+                let h: i64 = heights.iter().skip(r).take(rowspan).fold(0i64, |a, h| a.saturating_add(*h));
+                let border = if !ruled {
+                    1
+                } else {
+                    match cell.and_then(|c| c.fill) {
+                        Some(f) => self.fill_id(f),
+                        None => RULED_BORDER,
+                    }
+                };
                 let runs = match cell {
                     Some(c) => self.run(&c.text, c.size, c.bold, c.italic, c.color),
                     None => "<hp:run charPrIDRef=\"0\"><hp:t/></hp:run>".into(),
                 };
+                let valign = if ruled { "CENTER" } else { "TOP" };
                 rows.push_str(&format!(
-                    "<hp:tc name=\"\" header=\"0\" hasMargin=\"0\" protect=\"0\" editable=\"0\" dirty=\"1\" borderFillIDRef=\"1\">\
-<hp:subList id=\"\" textDirection=\"HORIZONTAL\" lineWrap=\"BREAK\" vertAlign=\"TOP\" linkListIDRef=\"0\" linkListNextIDRef=\"0\" textWidth=\"0\" textHeight=\"0\" hasTextRef=\"0\" hasNumRef=\"0\">\
+                    "<hp:tc name=\"\" header=\"0\" hasMargin=\"0\" protect=\"0\" editable=\"0\" dirty=\"1\" borderFillIDRef=\"{border}\">\
+<hp:subList id=\"\" textDirection=\"HORIZONTAL\" lineWrap=\"BREAK\" vertAlign=\"{valign}\" linkListIDRef=\"0\" linkListNextIDRef=\"0\" textWidth=\"0\" textHeight=\"0\" hasTextRef=\"0\" hasNumRef=\"0\">\
 <hp:p id=\"{}\" paraPrIDRef=\"0\" styleIDRef=\"0\" pageBreak=\"0\" columnBreak=\"0\" merged=\"0\">{runs}</hp:p></hp:subList>\
-<hp:cellAddr colAddr=\"{col}\" rowAddr=\"{r}\"/><hp:cellSpan colSpan=\"{span}\" rowSpan=\"1\"/><hp:cellSz width=\"{w}\" height=\"{row_h}\"/>\
+<hp:cellAddr colAddr=\"{col}\" rowAddr=\"{r}\"/><hp:cellSpan colSpan=\"{span}\" rowSpan=\"{rowspan}\"/><hp:cellSz width=\"{w}\" height=\"{h}\"/>\
 <hp:cellMargin left=\"510\" right=\"510\" top=\"141\" bottom=\"141\"/></hp:tc>",
                     self.next_id
                 ));
@@ -333,11 +402,12 @@ impl<'a> Section<'a> {
         let width: i64 = widths.iter().sum();
         let tbl = format!(
             "<hp:run charPrIDRef=\"0\"><hp:tbl id=\"{id}\" zOrder=\"0\" numberingType=\"TABLE\" textWrap=\"TOP_AND_BOTTOM\" textFlow=\"BOTH_SIDES\" lock=\"0\" dropcapstyle=\"None\" pageBreak=\"CELL\" repeatHeader=\"0\" \
-rowCnt=\"{}\" colCnt=\"{cols}\" cellSpacing=\"0\" borderFillIDRef=\"1\" noAdjust=\"0\">\
+rowCnt=\"{}\" colCnt=\"{cols}\" cellSpacing=\"0\" borderFillIDRef=\"{}\" noAdjust=\"0\">\
 <hp:sz width=\"{width}\" widthRelTo=\"ABSOLUTE\" height=\"{height}\" heightRelTo=\"ABSOLUTE\" protect=\"0\"/>\
 <hp:pos treatAsChar=\"1\" affectLSpacing=\"0\" flowWithText=\"1\" allowOverlap=\"0\" holdAnchorAndSO=\"0\" vertRelTo=\"PARA\" horzRelTo=\"COLUMN\" vertAlign=\"TOP\" horzAlign=\"LEFT\" vertOffset=\"0\" horzOffset=\"0\"/>\
 <hp:outMargin left=\"0\" right=\"0\" top=\"0\" bottom=\"0\"/><hp:inMargin left=\"510\" right=\"510\" top=\"141\" bottom=\"141\"/>{rows}</hp:tbl></hp:run>",
-            t.rows.len()
+            t.rows.len(),
+            if ruled { RULED_BORDER } else { 1 }
         );
         self.para(0, &tbl);
     }
@@ -385,6 +455,7 @@ pub fn hwpx(pages: &[Page], title: &str) -> Vec<u8> {
         media: Vec::new(),
         text_w: (w - 2 * mx).max(1_000),
         prev_text: String::new(),
+        fills: Vec::new(),
     };
     // Shape 0 is the default (body size, plain, black); the style and empty runs refer to it.
     let body = crate::body_size(pages);
@@ -409,7 +480,7 @@ pub fn hwpx(pages: &[Page], title: &str) -> Vec<u8> {
         sec.para(0, "<hp:run charPrIDRef=\"0\"><hp:t/></hp:run>");
     }
     let section = format!("{XML_DECL}<hs:sec {NS}>{}</hs:sec>", sec.xml);
-    let header = header(&sec.chars);
+    let header = header(&sec.chars, &sec.fills);
     let preview: String = sec.prev_text.chars().filter(|c| allowed(*c)).take(1024).collect();
     package(&section, &header, &sec.media, title, &preview)
 }
@@ -756,7 +827,7 @@ pub fn hwpx_layout(pages: &[Page], title: &str) -> Vec<u8> {
         ));
     }
     let section = format!("{XML_DECL}<hs:sec {NS}>{}</hs:sec>", layout.xml);
-    let header = header_with(&layout.chars, &layout.faces);
+    let header = header_with(&layout.chars, &layout.faces, &[]);
     let preview: String = layout.prev_text.chars().filter(|c| allowed(*c)).take(1024).collect();
     package(&section, &header, &layout.media, title, &preview)
 }
@@ -819,11 +890,21 @@ mod tests {
 
     #[test]
     fn tables_and_pictures() {
-        let cell = |t: &str, span: usize| Cell { text: t.into(), size: 10.0, bold: false, italic: false, color: [0.8, 0.0, 0.0], span };
+        let cell = |t: &str, span: usize| Cell {
+            text: t.into(),
+            size: 10.0,
+            bold: false,
+            italic: false,
+            color: [0.8, 0.0, 0.0],
+            span,
+            rowspan: 1,
+            fill: None,
+        };
         let table = Table {
             rect: [72.0, 500.0, 400.0, 560.0],
             cols: vec![72.0, 200.0, 300.0],
             rows: vec![vec![cell("품명", 2), cell("수량", 1)], vec![cell("파일철", 1)]],
+            row_edges: Vec::new(),
         };
         let im = Image { ext: "jpg", bytes: vec![0xFF, 0xD8, 0xFF], rect: [0.0, 0.0, 1000.0, 100.0], size: [1000.0, 100.0], rotation: 0.0 };
         let mut s = Section {
@@ -835,6 +916,7 @@ mod tests {
             media: Vec::new(),
             text_w: 45_000,
             prev_text: String::new(),
+            fills: Vec::new(),
         };
         s.table(&table);
         s.picture(&im);
@@ -848,6 +930,70 @@ mod tests {
         assert!(s.xml.contains("binaryItemIDRef=\"BIN0001\""));
         assert_eq!(s.media[0].0, "BIN0001.jpg");
         assert!(s.chars.xml().contains("textColor=\"#CC0000\""));
+    }
+
+    #[test]
+    fn ruled_tables_keep_row_spans_heights_rules_and_shades() {
+        let cell = |t: &str, span: usize, rowspan: usize, fill: Option<[f64; 3]>| Cell {
+            text: t.into(),
+            size: 10.0,
+            bold: false,
+            italic: false,
+            color: [0.0; 3],
+            span,
+            rowspan,
+            fill,
+        };
+        // 구분 spans both rows; the second row holds only the two cells beside it.
+        let table = Table {
+            rect: [72.0, 500.0, 372.0, 560.0],
+            cols: vec![72.0, 172.0, 272.0],
+            rows: vec![
+                vec![cell("구분", 1, 2, Some([0.9, 0.9, 0.9])), cell("가", 1, 1, None), cell("나", 1, 1, None)],
+                vec![cell("다", 1, 1, None), cell("라", 1, 1, Some([0.9, 0.9, 0.9]))],
+            ],
+            row_edges: vec![560.0, 540.0, 500.0],
+        };
+        let mut s = Section {
+            xml: String::new(),
+            next_id: 0,
+            sec: None,
+            page_break: false,
+            chars: CharShapes::default(),
+            media: Vec::new(),
+            text_w: 45_000,
+            prev_text: String::new(),
+            fills: Vec::new(),
+        };
+        s.table(&table);
+        let x = &s.xml;
+        assert_eq!(x.matches("<hp:tc ").count(), 5, "{x}");
+        assert!(
+            x.contains(
+                "<hp:cellAddr colAddr=\"0\" rowAddr=\"0\"/><hp:cellSpan colSpan=\"1\" rowSpan=\"2\"/><hp:cellSz width=\"10000\" height=\"6000\"/>"
+            ),
+            "{x}"
+        );
+        // The second row starts beside the merged cell, at its drawn height.
+        assert!(
+            x.contains(
+                "<hp:cellAddr colAddr=\"1\" rowAddr=\"1\"/><hp:cellSpan colSpan=\"1\" rowSpan=\"1\"/><hp:cellSz width=\"10000\" height=\"4000\"/>"
+            ),
+            "{x}"
+        );
+        assert!(!x.contains("colAddr=\"0\" rowAddr=\"1\""), "{x}");
+        // Ruled cells and the table use solid rules; both shaded cells share one shaded fill.
+        assert!(x.contains("borderFillIDRef=\"3\" noAdjust"), "{x}");
+        assert_eq!(
+            x.matches("<hp:tc name=\"\" header=\"0\" hasMargin=\"0\" protect=\"0\" editable=\"0\" dirty=\"1\" borderFillIDRef=\"4\">").count(),
+            2,
+            "{x}"
+        );
+        assert_eq!(s.fills, vec![[230, 230, 230]]);
+        let head = header(&s.chars, &s.fills);
+        assert!(head.contains("<hh:borderFills itemCnt=\"4\">"), "{head}");
+        assert!(head.contains("<hh:borderFill id=\"4\"") && head.contains("faceColor=\"#E6E6E6\""), "{head}");
+        assert!(head.contains("<hh:leftBorder type=\"SOLID\""), "{head}");
     }
 
     #[test]
