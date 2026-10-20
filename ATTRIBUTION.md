@@ -4,7 +4,7 @@
 
 Every asset PdfCraft includes, bundles or uses to build its published material, with its author, source and licence. The policy is in [AGENTS.md](AGENTS.md) §1. The machine-readable list, with SHA-256 hashes, is [ATTRIBUTION.toml](ATTRIBUTION.toml). Licence texts are kept beside the assets and summarised in [NOTICE](NOTICE).
 
-## In this repository (261)
+## In this repository (263)
 
 | Asset | Title | Author | Licence | Source | Used for |
 |---|---|---|---|---|---|
@@ -269,6 +269,8 @@ Every asset PdfCraft includes, bundles or uses to build its published material, 
 | `docs/manual/images/redact1.webp` | KnuPdf user manual screenshot (redact1) | KnuPdf contributors | MIT OR Apache-2.0 | Contributor-original: screenshot of the KnuPdf 0.8.0 Windows build with numbered click markers; all personal data shown is made up | User manual (docs/manual) |
 | `docs/manual/images/redact2.webp` | KnuPdf user manual screenshot (redact2) | KnuPdf contributors | MIT OR Apache-2.0 | Contributor-original: screenshot of the KnuPdf 0.8.0 Windows build with numbered click markers; all personal data shown is made up | User manual (docs/manual) |
 | `docs/manual/images/redact3.webp` | KnuPdf user manual screenshot (redact3) | KnuPdf contributors | MIT OR Apache-2.0 | Contributor-original: screenshot of the KnuPdf 0.8.0 Windows build with numbered click markers; all personal data shown is made up | User manual (docs/manual) |
+| `assets/fonts/NanumBarunGothic.ttf` | NanumBarunGothic Regular | NAVER Corporation (designed by FONTRIX Inc.) | OFL-1.1 | https://hangeul.naver.com/font (Debian package fonts-nanum 20200506-1), unmodified | KnuPdf substitute for Korean (Adobe-Korea1) fonts a PDF does not embed, in crates/fonts KOREAN_FONTS |
+| `assets/fonts/NanumBarunGothicBold.ttf` | NanumBarunGothic Bold | NAVER Corporation (designed by FONTRIX Inc.) | OFL-1.1 | https://hangeul.naver.com/font (Debian package fonts-nanum 20200506-1), unmodified | KnuPdf substitute for Korean (Adobe-Korea1) fonts a PDF does not embed, in crates/fonts KOREAN_FONTS |
 
 ## Compiled in through dependencies (6)
 

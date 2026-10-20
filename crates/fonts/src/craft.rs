@@ -27,6 +27,30 @@ impl CraftFont {
     }
 }
 
+/// KnuPdf: NanumBarunGothic (OFL-1.1, `assets/fonts/`), which stands in for Korean fonts a PDF
+/// doesn't embed (Adobe-Korea1). It has Hangul, Latin and the KS X 1001 hanja, so a Korean line
+/// draws from one face. Unlike craft-fonts it is always built in.
+pub static KOREAN_FONTS: [CraftFont; 2] = [
+    CraftFont {
+        family: "NanumBarunGothic",
+        style: "Regular",
+        scripts: &["Kore", "Hang"],
+        bytes: include_bytes!("../../../assets/fonts/NanumBarunGothic.ttf"),
+    },
+    CraftFont {
+        family: "NanumBarunGothic",
+        style: "Bold",
+        scripts: &["Kore", "Hang"],
+        bytes: include_bytes!("../../../assets/fonts/NanumBarunGothicBold.ttf"),
+    },
+];
+
+/// The Korean face for a regular or bold style ([`KOREAN_FONTS`]).
+pub fn korean_document_font(bold: bool) -> &'static CraftFont {
+    let [regular, bold_face] = &KOREAN_FONTS;
+    if bold { bold_face } else { regular }
+}
+
 /// The `Jpan` craft-fonts faces in the order the interface prefers them: BIZ UDPGothic (a UI
 /// face) first, then the rest in manifest order. Empty without craft-fonts.
 pub fn ui_japanese_fonts() -> Vec<&'static CraftFont> {
