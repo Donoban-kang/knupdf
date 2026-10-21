@@ -1,10 +1,12 @@
-//! Asks GitHub for the latest PdfCraft release (Help ▸ Check for updates, issue #28).
+//! Asks GitHub for the latest KnuPdf release (Help ▸ Check for updates, issue #28).
 
 use std::time::Duration;
 
 use pdfcraft_ui_egui::updates::{RELEASES_PAGE, Release};
 
-const LATEST: &str = "https://api.github.com/repos/storytold/pdfcraft/releases/latest";
+/// KnuPdf: its own releases, newest first. Not `/releases/latest`, which leaves out
+/// pre-releases, and every KnuPdf release so far is one (시험판).
+const RELEASES: &str = "https://api.github.com/repos/Donoban-kang/knupdf/releases?per_page=30";
 
 /// The latest release. The answer is untrusted: its size is capped, and only a page under
 /// [`RELEASES_PAGE`] is ever offered for download (anything else falls back to that list).
@@ -15,7 +17,7 @@ pub fn latest_release() -> Result<Release, String> {
         .build()
         .new_agent();
     let mut response = agent
-        .get(LATEST)
+        .get(RELEASES)
         .header("Accept", "application/vnd.github+json")
         .header("User-Agent", concat!("PdfCraft/", env!("CARGO_PKG_VERSION")))
         // Read error statuses ourselves: a 403 from GitHub usually means its anonymous
@@ -69,9 +71,28 @@ fn rate_limited(reset: Option<&str>, now: u64) -> String {
     }
 }
 
+/// The release with the highest version in GitHub's list (drafts left out). A tag that is not a
+/// version is passed over.
 fn parse(body: &str) -> Result<Release, String> {
     let v: serde_json::Value = serde_json::from_str(body).map_err(|e| format!("unreadable answer ({e})"))?;
-    let version = v["tag_name"].as_str().filter(|t| !t.is_empty() && t.len() <= 64).ok_or("no release found")?.to_string();
+    let list = v.as_array().ok_or("no release found")?;
+    let mut best: Option<Release> = None;
+    for r in list.iter().filter(|r| r["draft"].as_bool() != Some(true)) {
+        let Ok(release) = release(r) else { continue };
+        if best.as_ref().is_none_or(|b| pdfcraft_ui_egui::updates::is_newer(&release.version, &b.version)) {
+            best = Some(release);
+        }
+    }
+    best.ok_or_else(|| "no release found".to_string())
+}
+
+/// One release of the list, with a version tag; its page only when it is under [`RELEASES_PAGE`].
+fn release(v: &serde_json::Value) -> Result<Release, String> {
+    let version = v["tag_name"]
+        .as_str()
+        .filter(|t| !t.is_empty() && t.len() <= 64 && pdfcraft_ui_egui::updates::is_newer(t, "0.0.0"))
+        .ok_or("no release found")?
+        .to_string();
     let url = v["html_url"]
         .as_str()
         .filter(|u| u.strip_prefix(RELEASES_PAGE).is_some_and(|rest| rest.starts_with('/') && !rest.contains(['?', '#', '\\'])))
@@ -86,14 +107,37 @@ mod tests {
 
     #[test]
     fn answers_are_read_and_only_our_release_pages_are_offered() {
-        let r = parse(r#"{"tag_name":"v0.2.0","html_url":"https://github.com/storytold/pdfcraft/releases/tag/v0.2.0"}"#).unwrap();
-        assert_eq!(r, Release { version: "v0.2.0".into(), url: "https://github.com/storytold/pdfcraft/releases/tag/v0.2.0".into() });
-        for elsewhere in ["https://example.com/pdfcraft.exe", "https://github.com/storytold/pdfcraft/releases.evil/x", "javascript:alert(1)"] {
-            let r = parse(&format!(r#"{{"tag_name":"v9.9.9","html_url":"{elsewhere}"}}"#)).unwrap();
+        let r = parse(r#"[{"tag_name":"v0.2.0","html_url":"https://github.com/Donoban-kang/knupdf/releases/tag/v0.2.0"}]"#).unwrap();
+        assert_eq!(r, Release { version: "v0.2.0".into(), url: "https://github.com/Donoban-kang/knupdf/releases/tag/v0.2.0".into() });
+        for elsewhere in [
+            "https://example.com/pdfcraft.exe",
+            "https://github.com/Donoban-kang/knupdf/releases.evil/x",
+            "https://github.com/storytold/pdfcraft/releases/tag/v9.9.9",
+            "javascript:alert(1)",
+        ] {
+            let r = parse(&format!(r#"[{{"tag_name":"v9.9.9","html_url":"{elsewhere}"}}]"#)).unwrap();
             assert_eq!(r.url, RELEASES_PAGE, "{elsewhere}");
         }
         assert!(parse(r#"{"message":"Not Found"}"#).is_err());
+        assert!(parse("[]").is_err());
         assert!(parse("<html>").is_err());
+    }
+
+    /// KnuPdf: every release so far is a pre-release, which `/releases/latest` leaves out; the
+    /// highest version in the list wins, whatever its place, and drafts and non-version tags
+    /// are passed over.
+    #[test]
+    fn the_highest_knupdf_release_is_offered() {
+        let page = |t: &str| format!("https://github.com/Donoban-kang/knupdf/releases/tag/{t}");
+        let entry = |t: &str, draft: bool, pre: bool| format!(r#"{{"tag_name":"{t}","html_url":"{}","draft":{draft},"prerelease":{pre}}}"#, page(t));
+        let body = format!(
+            "[{},{},{},{}]",
+            entry("v0.8.1", false, true),
+            entry("v0.8.2", false, true),
+            entry("v0.9.9", true, false),
+            entry("nightly", false, true)
+        );
+        assert_eq!(parse(&body).unwrap(), Release { version: "v0.8.2".into(), url: page("v0.8.2") });
     }
 
     #[test]

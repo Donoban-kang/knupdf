@@ -11,8 +11,8 @@ use egui::{Align, Layout};
 
 use crate::{PdfCraftApp, theme, widgets};
 
-/// Where every PdfCraft release is listed.
-pub const RELEASES_PAGE: &str = "https://github.com/storytold/pdfcraft/releases";
+/// Where every KnuPdf release is listed (KnuPdf: its own releases, not upstream PdfCraft's).
+pub const RELEASES_PAGE: &str = "https://github.com/Donoban-kang/knupdf/releases";
 
 /// The latest published release.
 #[derive(Clone, Debug, PartialEq, Eq)]
