@@ -3043,7 +3043,7 @@ licence = "MIT OR Apache-2.0"
 licence_file = "LICENSE-MIT"
 kind = "translation"
 usage = "Korean UI strings, compiled in by crates/ui-egui/src/i18n/mod.rs"
-sha256 = "04f522d67eec1b2ad27d7e9bcd425053c43abcf501959d5419535b98a18ecf7f"
+sha256 = "6eae0342cc58353f1a7e8f1db7bda923ca420196e47b288e56931a5e241c3c1e"
 
 [[asset]]
 path = "assets/app-icon-knupdf/knupdf.svg"

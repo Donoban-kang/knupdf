@@ -845,11 +845,20 @@ impl PdfCraftApp {
         let Some(doc) = self.session.get(id) else { return };
         let stem = doc.name.trim_end_matches(".pdf").trim_end_matches(".PDF").to_string();
         let ext = format.extension();
-        let bytes = doc.export_office(format);
+        let (bytes, scans) = doc.export_office_reported(format);
+        // KnuPdf: scanned pages read as text, or kept as pictures for want of Korean recognition.
+        let note = scan_note(&scans);
         #[cfg(not(target_arch = "wasm32"))]
         {
             let write = move |app: &mut Self, path: std::path::PathBuf| match crate::editing::write_atomically(&path.to_string_lossy(), &bytes) {
-                Ok(()) => app.notify_fmt("Exported to {path}", &[("path", &path.display().to_string())]),
+                Ok(()) => {
+                    let mut message = crate::i18n::fmt(tl!("Exported to {path}"), &[("path", &path.display().to_string())]);
+                    if let Some(note) = &note {
+                        message.push(' ');
+                        message.push_str(note);
+                    }
+                    app.notify(message);
+                }
                 Err(e) => app.notify_fmt("Couldn't write {name}: {e}", &[("name", &path.display().to_string()), ("e", &e.to_string())]),
             };
             match self.save_override.clone() {
@@ -864,8 +873,13 @@ impl PdfCraftApp {
             }
         }
         #[cfg(target_arch = "wasm32")]
-        if let Err(e) = crate::editing::download(&format!("{stem}.{ext}"), &bytes) {
-            self.notify_error(e);
+        match crate::editing::download(&format!("{stem}.{ext}"), &bytes) {
+            Err(e) => self.notify_error(e),
+            Ok(()) => {
+                if let Some(note) = note {
+                    self.notify(note);
+                }
+            }
         }
     }
 
@@ -991,6 +1005,21 @@ impl PdfCraftApp {
             }
             Err(e) => self.notify_error(e),
         }
+    }
+}
+
+/// KnuPdf: what an export did with scanned pages, in the UI language; `None` when it met none.
+fn scan_note(scans: &pdfcraft_engine::compare::ScanReport) -> Option<String> {
+    let count = |n: usize| n.to_string();
+    match (scans.recognized.len(), scans.unreadable.len()) {
+        (0, 0) => None,
+        (read, 0) => Some(crate::i18n::fmt(tl!("Read the text of {n} scanned pages; check it against the original."), &[("n", &count(read))])),
+        (_, kept) => Some(crate::i18n::fmt(
+            tl!(
+                "{n} scanned pages stayed pictures: this computer cannot read Korean text (Windows Settings ▸ Time & language ▸ Language ▸ Korean ▸ Language options ▸ add Optical character recognition)."
+            ),
+            &[("n", &count(kept))],
+        )),
     }
 }
 

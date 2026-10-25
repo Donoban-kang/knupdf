@@ -38,7 +38,13 @@ pub enum OcrError {
     Recognize(String),
     #[error("the image is empty")]
     EmptyImage,
+    /// KnuPdf: the operating system cannot read this language (Windows without its Korean
+    /// optical character recognition feature, or another system).
+    #[error("this computer cannot read {0} text (Windows: Settings ▸ Time & language ▸ Language ▸ add its optical character recognition)")]
+    SystemUnavailable(String),
 }
+
+pub mod system;
 
 /// Where the two model files are.
 #[derive(Clone, Debug, PartialEq)]

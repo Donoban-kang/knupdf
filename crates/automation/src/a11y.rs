@@ -716,9 +716,18 @@ impl Automation {
             Some("keep") if format == pdfcraft_engine::compare::OfficeFormat::Hwpx => format = pdfcraft_engine::compare::OfficeFormat::HwpxLayout,
             Some(other) => return Err(ToolError::InvalidArgs(format!("layout {other:?}: \"flow\", or \"keep\" for a .hwpx path"))),
         }
-        let bytes = self.doc_to_copy(a)?.export_office(format);
+        let (bytes, scans) = self.doc_to_copy(a)?.export_office_reported(format);
         write_atomic(&path, &bytes)?;
-        Ok(json!({ "path": path.to_string_lossy(), "bytes": bytes.len(), "format": format.extension() }))
+        // KnuPdf: scanned pages (1-based) read as text, and those kept as pictures because this
+        // computer cannot read Korean.
+        let one_based = |pages: &[usize]| pages.iter().map(|p| p + 1).collect::<Vec<_>>();
+        Ok(json!({
+            "path": path.to_string_lossy(),
+            "bytes": bytes.len(),
+            "format": format.extension(),
+            "scanned_pages_read": one_based(&scans.recognized),
+            "scanned_pages_as_pictures": one_based(&scans.unreadable),
+        }))
     }
 
     fn pdfa_level(&self, a: &Args) -> Result<pdfcraft_engine::pdfa::Level> {
