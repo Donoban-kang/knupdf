@@ -4100,6 +4100,7 @@ name = "pdfcraft-engine"
 version = "0.8.3"
 dependencies = [
  "chrono",
+ "flate2",
  "icu_properties",
  "idna",
  "image",
@@ -4212,6 +4213,7 @@ dependencies = [
  "pdfcraft-fonts",
  "rten",
  "thiserror 2.0.21",
+ "windows",
 ]
 
 [[package]]

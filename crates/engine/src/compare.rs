@@ -189,11 +189,111 @@ fn cut(rgba: &[u8], width: u32, height: u32, page_w: f64, page_h: f64, rect: [f6
     Some(pdfcraft_export::Image { ext: "png", bytes, rect: placed, size: [placed[2] - placed[0], placed[3] - placed[1]], rotation: 0.0 })
 }
 
+/// KnuPdf: reads a rendered page (RGBA, width, height) into lines of words in its pixels, or
+/// `None` when nothing on this computer can.
+pub(crate) type ScanReader<'a> = dyn Fn(&[u8], u32, u32) -> Option<Vec<pdfcraft_ocr::Line>> + 'a;
+
+/// KnuPdf: the language scanned pages are read in.
+const SCAN_LANGUAGE: &str = "ko";
+/// KnuPdf: resolution scanned pages are read at.
+const OCR_DPI: f32 = 300.0;
+
+/// KnuPdf: Windows' own text recognition, in Korean, when this computer has it.
+fn system_reader(rgba: &[u8], width: u32, height: u32) -> Option<Vec<pdfcraft_ocr::Line>> {
+    pdfcraft_ocr::system::recognize(rgba, width, height, SCAN_LANGUAGE).ok()
+}
+
+/// KnuPdf: what an export did with scanned pages (0-based).
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct ScanReport {
+    /// Read as text.
+    pub recognized: Vec<usize>,
+    /// Kept as pictures: this computer cannot read Korean text.
+    pub unreadable: Vec<usize>,
+}
+
+/// KnuPdf: lines read from a scan, `sx` × `sy` pixels a point on a page `page_h` points tall,
+/// as text lines (y up) and as paragraphs: a paragraph breaks where the gap above a line is
+/// larger than most of a line or the text size changes. Words are joined with a space only
+/// where the scan shows one, so text that recognition split letter by letter reads whole.
+fn scanned_text(lines: &[pdfcraft_ocr::Line], sx: f64, sy: f64, page_h: f64) -> (Vec<pdfcraft_export::TextLine>, Vec<pdfcraft_export::Block>) {
+    let mut text_lines: Vec<pdfcraft_export::TextLine> = Vec::new();
+    for line in lines {
+        let mut words: Vec<&pdfcraft_ocr::Word> = line.words.iter().filter(|w| w.rect.iter().all(|v| v.is_finite())).collect();
+        words.sort_by(|a, b| a.rect[0].total_cmp(&b.rect[0]));
+        let Some(first) = words.first() else { continue };
+        let mut text = String::new();
+        let mut rect = first.rect;
+        let mut prev: Option<&pdfcraft_ocr::Word> = None;
+        for w in &words {
+            if let Some(p) = prev {
+                let height = (w.rect[3] - w.rect[1]).max(p.rect[3] - p.rect[1]).max(1.0);
+                if w.rect[0] - p.rect[2] > 0.25 * height {
+                    text.push(' ');
+                }
+            }
+            text.push_str(w.text.trim());
+            rect = [rect[0].min(w.rect[0]), rect[1].min(w.rect[1]), rect[2].max(w.rect[2]), rect[3].max(w.rect[3])];
+            prev = Some(w);
+        }
+        if text.trim().is_empty() {
+            continue;
+        }
+        let [l, t, r, b] = rect.map(f64::from);
+        let size = (((b - t) / sy * 0.8) * 2.0).round() / 2.0;
+        text_lines.push(pdfcraft_export::TextLine {
+            text,
+            rect: [l / sx, page_h - b / sy, r / sx, page_h - t / sy],
+            size: if size.is_finite() { size.clamp(5.0, 72.0) } else { 10.0 },
+            font: String::new(),
+            bold: false,
+            italic: false,
+            color: [0.0; 3],
+        });
+    }
+    // Top to bottom, as the page reads.
+    text_lines.sort_by(|a, b| b.rect[3].total_cmp(&a.rect[3]));
+    let mut blocks: Vec<pdfcraft_export::Block> = Vec::new();
+    let mut last: Option<&pdfcraft_export::TextLine> = None;
+    for line in &text_lines {
+        let joins = last.is_some_and(|p| {
+            let height = p.rect[3] - p.rect[1];
+            let gap = p.rect[1] - line.rect[3];
+            gap <= 0.7 * height && (line.size - p.size).abs() <= 0.2 * p.size.max(1.0)
+        });
+        match blocks.last_mut() {
+            Some(block) if joins => {
+                block.text.push(' ');
+                block.text.push_str(&line.text);
+                block.rect = [block.rect[0].min(line.rect[0]), line.rect[1].min(block.rect[1]), block.rect[2].max(line.rect[2]), block.rect[3]];
+            }
+            _ => blocks.push(pdfcraft_export::Block {
+                text: line.text.clone(),
+                rect: line.rect,
+                size: line.size,
+                bold: false,
+                italic: false,
+                color: [0.0; 3],
+                rotation: 0.0,
+                runs: Vec::new(),
+            }),
+        }
+        last = Some(line);
+    }
+    (text_lines, blocks)
+}
+
 impl crate::Document {
     /// The pages as paragraphs and images (for Word, HTML and RTF export), including what
     /// form XObjects draw.
     pub fn export_pages(&self) -> Vec<pdfcraft_export::Page> {
-        let Some(cos) = self.editor.as_ref().map(|e| &e.cos) else { return Vec::new() };
+        self.export_pages_read_with(&system_reader).0
+    }
+
+    /// [`Self::export_pages`], scanned pages read by `read` (an RGBA page image to its lines, or
+    /// `None` when nothing can read it), and what became of them.
+    pub(crate) fn export_pages_read_with(&self, read: &ScanReader<'_>) -> (Vec<pdfcraft_export::Page>, ScanReport) {
+        let Some(cos) = self.editor.as_ref().map(|e| &e.cos) else { return (Vec::new(), ScanReport::default()) };
         // KnuPdf: where each page has pictures that cannot be taken out as files (JBIG2, CCITT
         // fax and JPEG 2000 scans, inline images), in visible points.
         let mut unreadable: Vec<Vec<[f64; 4]>> = vec![Vec::new(); self.info.pages.len()];
@@ -273,8 +373,8 @@ impl crate::Document {
                 pdfcraft_export::Page { width: info.width as f64, height: info.height as f64, blocks, images, lines: Vec::new(), shapes: Vec::new() }
             })
             .collect();
-        self.add_drawn_pictures(&mut pages, &unreadable);
-        pages
+        let report = self.add_drawn_pictures(&mut pages, &unreadable, read);
+        (pages, report)
     }
 
     /// KnuPdf: what the export could not take out of a page, as the page draws it. Pictures that
@@ -282,7 +382,8 @@ impl crate::Document {
     /// are cut from the rendered page; a page with neither text nor pictures that still draws
     /// something (text turned into outlines, vector art) becomes one picture of the whole page.
     /// Without this a scanned page came out empty in every format.
-    fn add_drawn_pictures(&self, pages: &mut [pdfcraft_export::Page], unreadable: &[Vec<[f64; 4]>]) {
+    fn add_drawn_pictures(&self, pages: &mut [pdfcraft_export::Page], unreadable: &[Vec<[f64; 4]>], read: &ScanReader<'_>) -> ScanReport {
+        let mut report = ScanReport::default();
         let mut renderer = None;
         for (i, page) in pages.iter_mut().enumerate() {
             let rects = unreadable.get(i).map_or(&[][..], Vec::as_slice);
@@ -297,6 +398,32 @@ impl crate::Document {
             let (w, h) = (page.width, page.height);
             if !(w.is_finite() && h.is_finite() && w > 0.0 && h > 0.0) {
                 continue;
+            }
+            // A scanned page (pictures that cannot be taken out cover most of it, or it draws
+            // without text or pictures) and no text of its own: read it, so the export holds
+            // text that can be edited rather than a picture.
+            let covered: f64 = rects.iter().map(|r| ((r[2] - r[0]) * (r[3] - r[1])).max(0.0)).sum();
+            if page.blocks.is_empty() && (whole || covered >= 0.5 * w * h) {
+                let scale = pdfcraft_render::effective_scale(w as f32, h as f32, OCR_DPI / 72.0);
+                let r = renderer.render(pdfcraft_render::RenderRequest { page: i, scale, tag: pdfcraft_render::PRINT_TAG, ..Default::default() });
+                if r.error.is_none() && r.width > 0 && r.height > 0 {
+                    let mut rgba = r.rgba.to_vec();
+                    crate::print_raster::over_white(&mut rgba, false);
+                    match read(&rgba, r.width, r.height) {
+                        Some(lines) if !lines.is_empty() => {
+                            let (sx, sy) = (f64::from(r.width) / w, f64::from(r.height) / h);
+                            let (text_lines, blocks) = scanned_text(&lines, sx, sy, h);
+                            if !blocks.is_empty() {
+                                page.lines.extend(text_lines);
+                                page.blocks.extend(blocks);
+                                report.recognized.push(i);
+                                continue;
+                            }
+                        }
+                        Some(_) => {}
+                        None => report.unreadable.push(i),
+                    }
+                }
             }
             let scale = pdfcraft_render::effective_scale(w as f32, h as f32, PICTURE_DPI / 72.0);
             let r = renderer.render(pdfcraft_render::RenderRequest { page: i, scale, tag: pdfcraft_render::PRINT_TAG, ..Default::default() });
@@ -313,6 +440,7 @@ impl crate::Document {
                 }
             }
         }
+        report
     }
 
     /// KnuPdf: each page's text line by line and its rules and boxes, for the export that keeps
@@ -333,6 +461,8 @@ impl crate::Document {
             let crop_width = f64::from(info.crop[2] - info.crop[0]);
             let display_width = f64::from(if info.rotation % 180 == 0 { info.width } else { info.height });
             let unit = if crop_width > 0.0 && crop_width.is_finite() && display_width.is_finite() { display_width / crop_width } else { 1.0 };
+            // Lines read from a scan stay (a scanned page has none of its own).
+            let read_from_scan = std::mem::take(&mut page.lines);
             page.lines = pdfcraft_edit::text_lines(cos, i)
                 .unwrap_or_default()
                 .into_iter()
@@ -347,6 +477,7 @@ impl crate::Document {
                     color: l.color,
                     text: l.text,
                 })
+                .chain(read_from_scan)
                 .collect();
             let height = f64::from(info.height);
             let up = |p: [f64; 2]| [p[0], height - p[1]];
@@ -368,20 +499,135 @@ impl crate::Document {
 
     /// The document as a Word, PowerPoint, Hangul (HWPX), HTML or RTF file.
     pub fn export_office(&self, format: OfficeFormat) -> Vec<u8> {
-        let mut pages = self.export_pages();
+        self.export_office_reported(format).0
+    }
+
+    /// KnuPdf: [`Self::export_office`], and which scanned pages became text and which stayed
+    /// pictures because this computer cannot read Korean.
+    pub fn export_office_reported(&self, format: OfficeFormat) -> (Vec<u8>, ScanReport) {
+        self.export_office_read_with(format, &system_reader)
+    }
+
+    pub(crate) fn export_office_read_with(&self, format: OfficeFormat, read: &ScanReader<'_>) -> (Vec<u8>, ScanReport) {
+        let (mut pages, report) = self.export_pages_read_with(read);
         // KnuPdf: both Hangul exports read the page's text lines and rules (ruled tables,
         // paragraphs split at list marks); the other formats keep the plain text blocks.
         if matches!(format, OfficeFormat::Hwpx | OfficeFormat::HwpxLayout) {
             self.add_layout(&mut pages);
         }
         let title = self.info.title.clone().unwrap_or_else(|| self.name.trim_end_matches(".pdf").to_string());
-        match format {
+        let bytes = match format {
             OfficeFormat::Docx => pdfcraft_export::docx(&pages, &title),
             OfficeFormat::Hwpx => pdfcraft_export::hwpx(&pages, &title),
             OfficeFormat::HwpxLayout => pdfcraft_export::hwpx_layout(&pages, &title),
             OfficeFormat::Pptx => pdfcraft_export::pptx(&pages, &title),
             OfficeFormat::Html => pdfcraft_export::html(&pages, &title).into_bytes(),
             OfficeFormat::Rtf => pdfcraft_export::rtf(&pages).into_bytes(),
+        };
+        (bytes, report)
+    }
+}
+
+#[cfg(test)]
+mod scan_tests {
+    use super::*;
+    use crate::Session;
+
+    /// A one-page scan: an inline image over the page, which no export can take out.
+    fn scan_pdf() -> Vec<u8> {
+        let c = "q 595 0 0 842 0 0 cm BI /W 2 /H 2 /CS /G /BPC 8 ID \x00\u{7f}\u{7f}\x00 EI Q";
+        let objs = [
+            "<< /Type /Catalog /Pages 2 0 R >>".to_string(),
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_string(),
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R >>".to_string(),
+            format!("<< /Length {} >>\nstream\n{c}\nendstream", c.len()),
+        ];
+        let mut pdf = b"%PDF-1.7\n".to_vec();
+        let mut offsets = Vec::new();
+        for (i, o) in objs.iter().enumerate() {
+            offsets.push(pdf.len());
+            pdf.extend_from_slice(format!("{} 0 obj\n{o}\nendobj\n", i + 1).as_bytes());
         }
+        let xref = pdf.len();
+        pdf.extend_from_slice(format!("xref\n0 {}\n0000000000 65535 f \n", objs.len() + 1).as_bytes());
+        for o in offsets {
+            pdf.extend_from_slice(format!("{o:010} 00000 n \n").as_bytes());
+        }
+        pdf.extend_from_slice(format!("trailer << /Size {} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF", objs.len() + 1).as_bytes());
+        pdf
+    }
+
+    fn word(text: &str, l: f32, t: f32, r: f32, b: f32) -> pdfcraft_ocr::Word {
+        pdfcraft_ocr::Word { text: text.into(), rect: [l, t, r, b] }
+    }
+
+    /// What Windows reads off the scan, in its pixels: a title, then two lines of one
+    /// paragraph, the second word of the title split letter by letter.
+    fn read(_: &[u8], width: u32, height: u32) -> Option<Vec<pdfcraft_ocr::Line>> {
+        assert!(width > 2000 && height > 3000, "read at 300 dpi: {width} × {height}");
+        Some(vec![
+            pdfcraft_ocr::Line {
+                words: vec![word("공", 300.0, 300.0, 360.0, 360.0), word("문", 362.0, 300.0, 422.0, 360.0), word("제목", 460.0, 300.0, 580.0, 360.0)],
+            },
+            pdfcraft_ocr::Line { words: vec![word("첫째", 300.0, 500.0, 400.0, 540.0), word("줄", 420.0, 500.0, 460.0, 540.0)] },
+            pdfcraft_ocr::Line { words: vec![word("둘째", 300.0, 550.0, 400.0, 590.0), word("줄", 420.0, 550.0, 460.0, 590.0)] },
+        ])
+    }
+
+    #[test]
+    fn scanned_pages_are_read_into_text_that_can_be_edited() {
+        let mut s = Session::new();
+        let id = s.open("scan.pdf", None, std::sync::Arc::new(scan_pdf()), None).unwrap();
+        let doc = s.get(id).unwrap();
+        let (pages, report) = doc.export_pages_read_with(&read);
+        assert_eq!(report, ScanReport { recognized: vec![0], unreadable: Vec::new() });
+        let page = &pages[0];
+        assert!(page.images.is_empty(), "the scan is replaced by its text");
+        let texts: Vec<&str> = page.blocks.iter().map(|b| b.text.as_str()).collect();
+        assert_eq!(texts, ["공문 제목", "첫째 줄 둘째 줄"], "letters join, words keep their space, close lines make one paragraph");
+        // Placed where the scan shows them, in points (y up): 300 px at ~300 dpi is ~72 pt.
+        let title = &page.lines[0];
+        assert!((title.rect[0] - 72.0).abs() < 3.0 && (title.rect[3] - (842.0 - 72.0)).abs() < 3.0, "{:?}", title.rect);
+        assert!(title.size > 8.0 && title.size < 15.0, "{}", title.size);
+        // Both Hangul exports carry it as text.
+        for format in [OfficeFormat::Hwpx, OfficeFormat::HwpxLayout, OfficeFormat::Docx] {
+            let (bytes, _) = doc.export_office_read_with(format, &read);
+            let text = unzip_text(&bytes);
+            assert!(text.contains("공문 제목") && text.contains("둘째 줄"), "{format:?}");
+        }
+    }
+
+    #[test]
+    fn without_korean_recognition_a_scan_stays_a_picture_and_says_so() {
+        let mut s = Session::new();
+        let id = s.open("scan.pdf", None, std::sync::Arc::new(scan_pdf()), None).unwrap();
+        let (pages, report) = s.get(id).unwrap().export_pages_read_with(&|_: &[u8], _, _| None);
+        assert_eq!(report, ScanReport { recognized: Vec::new(), unreadable: vec![0] });
+        assert_eq!(pages[0].images.len(), 1);
+        assert!(pages[0].blocks.is_empty());
+    }
+
+    /// Every part of a zip that is stored or deflated, as text (enough to look for words).
+    fn unzip_text(zip: &[u8]) -> String {
+        let mut out = String::new();
+        let mut at = 0;
+        while let Some(i) = zip.get(at..).and_then(|z| z.windows(4).position(|w| w == b"PK\x03\x04")) {
+            let h = at + i;
+            let method = u16::from_le_bytes([zip[h + 8], zip[h + 9]]);
+            let size = u32::from_le_bytes([zip[h + 18], zip[h + 19], zip[h + 20], zip[h + 21]]) as usize;
+            let (n, e) = (u16::from_le_bytes([zip[h + 26], zip[h + 27]]) as usize, u16::from_le_bytes([zip[h + 28], zip[h + 29]]) as usize);
+            let start = h + 30 + n + e;
+            let data = &zip[start..start + size];
+            let raw = if method == 8 {
+                let mut raw = Vec::new();
+                std::io::Read::read_to_end(&mut flate2::read::DeflateDecoder::new(data), &mut raw).unwrap();
+                raw
+            } else {
+                data.to_vec()
+            };
+            out.push_str(&String::from_utf8_lossy(&raw));
+            at = start + size;
+        }
+        out
     }
 }
