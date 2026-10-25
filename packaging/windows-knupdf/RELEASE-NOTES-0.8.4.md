@@ -19,6 +19,6 @@ KnuPdf 0.8.4 시험판입니다. 0.8.3에서 바뀐 점만 적었습니다. 기�
 ## 파일 확인값 (SHA-256)
 
 ```
-SETUP_SHA  KnuPdf-0.8.4-windows-x64-setup.exe
-PORTABLE_SHA  KnuPdf-0.8.4-windows-x64-portable.zip
+d423c4ddff1723a2ce45971fc4c8827062de3c64ebcb279eef3c29c26a0d6ff0  KnuPdf-0.8.4-windows-x64-setup.exe
+2e6ff8adbcd1f2040ddd43fb057a5b478b93770ef5bc683e481a271d1188d633  KnuPdf-0.8.4-windows-x64-portable.zip
 ```
