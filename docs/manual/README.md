@@ -17,7 +17,7 @@ PDF를 열고, 보고, 고치고, 지키는 방법을 하나씩 따라 해 봐�
 
 **준비물**: Windows 10 또는 11 컴퓨터 · KnuPdf 설치 파일 · 연습할 PDF 파일 한 개
 
-> **설치 파일 받기**: [⬇ KnuPdf-0.8.3-windows-x64-setup.exe (32 MB)](https://github.com/Donoban-kang/knupdf/raw/main/downloads/KnuPdf-0.8.3-windows-x64-setup.exe)  
+> **설치 파일 받기**: [⬇ KnuPdf-0.8.4-windows-x64-setup.exe (32 MB)](https://github.com/Donoban-kang/knupdf/raw/main/downloads/KnuPdf-0.8.4-windows-x64-setup.exe)  
 > 받은 파일은 보통 컴퓨터의 **다운로드** 폴더에 있어요.
 
 **미션 목록**
@@ -37,7 +37,7 @@ PDF를 열고, 보고, 고치고, 지키는 방법을 하나씩 따라 해 봐�
 
 한 번만 하면 돼요. 처음이라면 어른과 함께 해요.
 
-1. **KnuPdf-0.8.3-windows-x64-setup.exe** 파일을 마우스로 **두 번 딸깍** 눌러요.
+1. **KnuPdf-0.8.4-windows-x64-setup.exe** 파일을 마우스로 **두 번 딸깍** 눌러요.
 2. 파란 창에 "Windows의 PC 보호"가 나오면 **[추가 정보]**를 누르고, 아래에 생기는 **[실행]**을 눌러요.
 3. "이 앱이 디바이스를 변경하도록 허용하시겠어요?"가 나오면 **[예]**를 눌러요.
 4. 설치 창에서 **[다음]**을 계속 누르고, 마지막에 **[설치]**, 그다음 **[마침]**을 눌러요.
