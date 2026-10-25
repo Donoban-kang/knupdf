@@ -5855,3 +5855,73 @@ fn cropping_an_existing_image_clips_it_and_moves_with_it() {
     // No area, or a box off the image, is refused.
     assert!(s.apply(id, Edit::EditPageImage { page: 0, index: 0, change: ImageEdit::Crop([10.0, 10.0, 10.0, 50.0]) }).is_err());
 }
+
+/// KnuPdf: every page reaches the export. A picture that cannot be written as a file (here a
+/// JPEG 2000 image, like the JBIG2, CCITT fax and JPEG 2000 scans that came out empty) is cut
+/// from the rendered page where it stands; a page drawing only an inline image or outlines
+/// becomes one picture of the page; a blank page stays empty.
+#[test]
+fn pages_drawn_without_text_or_files_are_exported_as_pictures() {
+    let jpx = "BAD-JPX";
+    let contents = [
+        "BT /F1 12 Tf 72 700 Td (Typed page one) Tj ET".to_string(),
+        "q 200 0 0 100 100 500 cm /Im1 Do Q".to_string(),
+        "q 200 0 0 100 100 500 cm BI /W 2 /H 2 /CS /G /BPC 8 ID \x00\u{7f}\u{7f}\x00 EI Q".to_string(),
+        "0 0 1 rg 100 100 300 300 re f".to_string(),
+        String::new(),
+    ];
+    let mut objs: Vec<String> = vec![
+        String::new(),
+        String::new(),
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>".into(),
+        format!(
+            "<< /Type /XObject /Subtype /Image /Width 8 /Height 4 /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /JPXDecode /Length {} >>\nstream\n{jpx}\nendstream",
+            jpx.len()
+        ),
+    ];
+    let mut kids = Vec::new();
+    for c in &contents {
+        objs.push(format!("<< /Length {} >>\nstream\n{c}\nendstream", c.len()));
+        let content = objs.len();
+        objs.push(format!(
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents {content} 0 R /Resources << /Font << /F1 3 0 R >> /XObject << /Im1 4 0 R >> >> >>"
+        ));
+        kids.push(format!("{} 0 R", objs.len()));
+    }
+    objs[0] = "<< /Type /Catalog /Pages 2 0 R >>".into();
+    objs[1] = format!("<< /Type /Pages /Kids [{}] /Count {} >>", kids.join(" "), kids.len());
+    let mut pdf = b"%PDF-1.7\n".to_vec();
+    let mut offsets = Vec::new();
+    for (i, o) in objs.iter().enumerate() {
+        offsets.push(pdf.len());
+        pdf.extend_from_slice(format!("{} 0 obj\n{o}\nendobj\n", i + 1).as_bytes());
+    }
+    let xref = pdf.len();
+    pdf.extend_from_slice(format!("xref\n0 {}\n0000000000 65535 f \n", objs.len() + 1).as_bytes());
+    for o in offsets {
+        pdf.extend_from_slice(format!("{o:010} 00000 n \n").as_bytes());
+    }
+    pdf.extend_from_slice(format!("trailer << /Size {} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF", objs.len() + 1).as_bytes());
+    let mut s = Session::new();
+    let id = s.open("scans.pdf", None, Arc::new(pdf), None).unwrap();
+    let pages = s.get(id).unwrap().export_pages();
+    assert_eq!(pages.len(), 5);
+    assert!(pages[0].blocks.iter().any(|b| b.text.contains("Typed page one")) && pages[0].images.is_empty());
+    // The JPEG 2000 image: cut where it stands (100..300 × 500..600 points), not dropped.
+    assert_eq!(pages[1].images.len(), 1, "{:?}", pages[1].images.iter().map(|i| i.rect).collect::<Vec<_>>());
+    let cut = &pages[1].images[0];
+    assert!(cut.bytes.starts_with(b"\x89PNG"));
+    assert!((cut.rect[0] - 100.0).abs() < 1.0 && (cut.rect[1] - 500.0).abs() < 1.0, "{:?}", cut.rect);
+    assert!((cut.rect[2] - 300.0).abs() < 1.0 && (cut.rect[3] - 600.0).abs() < 1.0, "{:?}", cut.rect);
+    // An inline image, and outlines only: the whole page, as one picture.
+    for page in &pages[2..4] {
+        assert_eq!(page.images.len(), 1);
+        let r = page.images[0].rect;
+        assert!(r[0].abs() < 1.0 && r[1].abs() < 1.0 && (r[2] - 595.0).abs() < 1.0 && (r[3] - 842.0).abs() < 1.0, "{r:?}");
+    }
+    assert!(pages[4].images.is_empty() && pages[4].blocks.is_empty(), "a blank page stays empty");
+    // Every format carries them: the Word file holds the three pictures.
+    let docx = s.get(id).unwrap().export_office(compare::OfficeFormat::Docx);
+    let names = docx.windows(11).filter(|w| *w == b"word/media/").count();
+    assert!(names >= 3, "{names} picture entries");
+}
