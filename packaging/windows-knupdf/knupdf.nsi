@@ -1,5 +1,5 @@
 ; KnuPdf Windows installer (NSIS, built on Linux with makensis).
-; makensis -DVERSION=0.8.3 -DSTAGE=<staging dir> -DOUT=<installer.exe> knupdf.nsi
+; makensis -DVERSION=0.8.4 -DSTAGE=<staging dir> -DOUT=<installer.exe> knupdf.nsi
 ; The staging dir holds KnuPdf.exe, models\, the licences and the app icon (KnuPdf.ico).
 
 Unicode true
