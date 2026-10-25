@@ -157,12 +157,48 @@ impl OfficeFormat {
     }
 }
 
+/// KnuPdf: resolution of the pictures drawn for what the export cannot take out of a page.
+const PICTURE_DPI: f32 = 150.0;
+/// KnuPdf: most such pictures one page gets.
+const MAX_DRAWN_PICTURES: usize = 64;
+
+/// The part `rect` (visible points, y up) of a page rendered to `width` × `height` opaque RGBA
+/// pixels, as a PNG placed where it stood. `None` when the part is empty, or, for a whole page
+/// (`skip_blank`), when the page draws nothing but white.
+fn cut(rgba: &[u8], width: u32, height: u32, page_w: f64, page_h: f64, rect: [f64; 4], skip_blank: bool) -> Option<pdfcraft_export::Image> {
+    let (sx, sy) = (f64::from(width) / page_w, f64::from(height) / page_h);
+    let clamp = |v: f64, max: u32| if v.is_finite() { v.clamp(0.0, f64::from(max)) as u32 } else { 0 };
+    let (x0, x1) = (clamp((rect[0] * sx).floor(), width), clamp((rect[2] * sx).ceil(), width));
+    let (y0, y1) = (clamp(((page_h - rect[3]) * sy).floor(), height), clamp(((page_h - rect[1]) * sy).ceil(), height));
+    if x1 <= x0 || y1 <= y0 {
+        return None;
+    }
+    let (cw, ch) = (x1 - x0, y1 - y0);
+    let row = (width as usize).checked_mul(4)?;
+    let mut out = Vec::with_capacity((cw as usize).saturating_mul(ch as usize).saturating_mul(4));
+    for y in y0..y1 {
+        let start = (y as usize).checked_mul(row)?.checked_add((x0 as usize).checked_mul(4)?)?;
+        out.extend_from_slice(rgba.get(start..start.checked_add((cw as usize).checked_mul(4)?)?)?);
+    }
+    // Near-white throughout: a blank page, nothing worth a picture.
+    if skip_blank && out.as_chunks::<4>().0.iter().all(|p| p[0] >= 250 && p[1] >= 250 && p[2] >= 250) {
+        return None;
+    }
+    let bytes = crate::export::encode_png(cw, ch, &out).ok()?;
+    let placed = [f64::from(x0) / sx, page_h - f64::from(y1) / sy, f64::from(x1) / sx, page_h - f64::from(y0) / sy];
+    Some(pdfcraft_export::Image { ext: "png", bytes, rect: placed, size: [placed[2] - placed[0], placed[3] - placed[1]], rotation: 0.0 })
+}
+
 impl crate::Document {
     /// The pages as paragraphs and images (for Word, HTML and RTF export), including what
     /// form XObjects draw.
     pub fn export_pages(&self) -> Vec<pdfcraft_export::Page> {
         let Some(cos) = self.editor.as_ref().map(|e| &e.cos) else { return Vec::new() };
-        self.info
+        // KnuPdf: where each page has pictures that cannot be taken out as files (JBIG2, CCITT
+        // fax and JPEG 2000 scans, inline images), in visible points.
+        let mut unreadable: Vec<Vec<[f64; 4]>> = vec![Vec::new(); self.info.pages.len()];
+        let mut pages: Vec<pdfcraft_export::Page> = self
+            .info
             .pages
             .iter()
             .enumerate()
@@ -218,7 +254,13 @@ impl crate::Document {
                     .unwrap_or_default()
                     .iter()
                     .filter_map(|im| {
-                        let (ext, bytes) = pdfcraft_create::image_file(cos, im.object?).ok()?;
+                        let file = im.object.and_then(|o| pdfcraft_create::image_file(cos, o).ok());
+                        let Some((ext, bytes)) = file else {
+                            if let Some(rects) = unreadable.get_mut(i) {
+                                rects.push(visible_rect(im.rect));
+                            }
+                            return None;
+                        };
                         Some(pdfcraft_export::Image {
                             ext: if ext == "jpg" { "jpg" } else { "png" },
                             bytes,
@@ -230,7 +272,47 @@ impl crate::Document {
                     .collect();
                 pdfcraft_export::Page { width: info.width as f64, height: info.height as f64, blocks, images, lines: Vec::new(), shapes: Vec::new() }
             })
-            .collect()
+            .collect();
+        self.add_drawn_pictures(&mut pages, &unreadable);
+        pages
+    }
+
+    /// KnuPdf: what the export could not take out of a page, as the page draws it. Pictures that
+    /// cannot be written as files (scanned pages in JBIG2, CCITT fax or JPEG 2000, inline images)
+    /// are cut from the rendered page; a page with neither text nor pictures that still draws
+    /// something (text turned into outlines, vector art) becomes one picture of the whole page.
+    /// Without this a scanned page came out empty in every format.
+    fn add_drawn_pictures(&self, pages: &mut [pdfcraft_export::Page], unreadable: &[Vec<[f64; 4]>]) {
+        let mut renderer = None;
+        for (i, page) in pages.iter_mut().enumerate() {
+            let rects = unreadable.get(i).map_or(&[][..], Vec::as_slice);
+            let whole = page.blocks.is_empty() && page.images.is_empty() && rects.is_empty();
+            if rects.is_empty() && !whole {
+                continue;
+            }
+            let renderer = renderer.get_or_insert_with(|| {
+                let src = self.export_source();
+                pdfcraft_render::PageRenderer::new(src.bytes, src.config)
+            });
+            let (w, h) = (page.width, page.height);
+            if !(w.is_finite() && h.is_finite() && w > 0.0 && h > 0.0) {
+                continue;
+            }
+            let scale = pdfcraft_render::effective_scale(w as f32, h as f32, PICTURE_DPI / 72.0);
+            let r = renderer.render(pdfcraft_render::RenderRequest { page: i, scale, tag: pdfcraft_render::PRINT_TAG, ..Default::default() });
+            if r.error.is_some() || r.width == 0 || r.height == 0 {
+                continue;
+            }
+            let mut rgba = r.rgba.to_vec();
+            crate::print_raster::over_white(&mut rgba, false);
+            let whole_page = [[0.0, 0.0, w, h]];
+            let wanted: &[[f64; 4]] = if whole { &whole_page } else { rects };
+            for rect in wanted.iter().take(MAX_DRAWN_PICTURES) {
+                if let Some(image) = cut(&rgba, r.width, r.height, w, h, *rect, whole) {
+                    page.images.push(image);
+                }
+            }
+        }
     }
 
     /// KnuPdf: each page's text line by line and its rules and boxes, for the export that keeps
