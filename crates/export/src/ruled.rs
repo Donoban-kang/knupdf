@@ -217,35 +217,27 @@ fn starts_item(text: &str) -> bool {
     let t = text.trim_start();
     let mut chars = t.chars();
     let Some(first) = chars.next() else { return false };
-    if matches!(
-        first,
-        '-' | '‐'
-            | '–'
-            | '―'
-            | '○'
-            | '●'
-            | '◦'
-            | '□'
-            | '■'
-            | '※'
-            | '·'
-            | '•'
-            | '▪'
-            | '◇'
-            | '◆'
-            | '▶'
-            | '｢'
-            | '「'
-            | '['
-            | '<'
-            | '('
-    ) {
+    if matches!(first, '-' | '‐' | '–' | '―' | '○' | '●' | '◦' | '□' | '■' | '※' | '·' | '•' | '▪' | '◇' | '◆' | '▶' | '｢' | '「' | '[' | '<')
+    {
         return true;
     }
-    // `1.`, `12)`, `가.`, `나)`: a number or one Hangul syllable, then `.` or `)`.
+    // `(1)`, `(가)`: a numbered mark in parentheses. Not any `(`: a wrapped line that starts
+    // `(월)까지` continues its sentence.
+    let mark = |m: &str| {
+        (!m.is_empty() && m.len() <= 3 && m.chars().all(|c| c.is_ascii_digit())) || (m.chars().count() == 1 && m.chars().all(list_syllable))
+    };
+    if first == '(' {
+        return t.get(1..).and_then(|r| r.split_once(')')).is_some_and(|(m, _)| mark(m));
+    }
+    // `1.`, `12)`, `가.`, `나)`: a number or one of the syllables lists count in, then `.` or `)`.
     let head: String = t.chars().take_while(|c| c.is_ascii_digit()).collect();
-    let rest = if head.is_empty() && ('가'..='힣').contains(&first) { chars.next() } else { t.chars().nth(head.len()) };
-    (!head.is_empty() || ('가'..='힣').contains(&first)) && matches!(rest, Some('.' | ')')) && head.len() <= 3
+    let rest = if head.is_empty() && list_syllable(first) { chars.next() } else { t.chars().nth(head.len()) };
+    (!head.is_empty() || list_syllable(first)) && matches!(rest, Some('.' | ')')) && head.len() <= 3
+}
+
+/// The syllables Korean documents count list items in: 가, 나, 다, … 하.
+fn list_syllable(c: char) -> bool {
+    "가나다라마바사아자차카타파하".contains(c)
 }
 
 /// The block for a paragraph of rows.
@@ -538,11 +530,28 @@ mod tests {
 
     #[test]
     fn list_marks() {
-        for t in ["- 항목", "\u{AD} 항목", "○ 각 부서", "※ 참고", "1. 관련", "12) 항목", "가. 추천", "나) 항목", "[붙임 2]의", "  가. 들여쓴"]
-        {
+        for t in [
+            "- 항목",
+            "\u{AD} 항목",
+            "○ 각 부서",
+            "※ 참고",
+            "1. 관련",
+            "12) 항목",
+            "가. 추천",
+            "나) 항목",
+            "[붙임 2]의",
+            "  가. 들여쓴",
+            "(1) 항목",
+            "(12) 항목",
+            "(가) 항목",
+            "(하) 항목",
+        ] {
             assert!(starts_item(&shown(t)), "{t}");
         }
-        for t in ["제출하여 주시기 바랍니다.", "2027년도 2월말", "가나다라", "100,000원"] {
+        // A wrapped line that starts with a bracketed word continues its sentence.
+        for t in
+            ["제출하여 주시기 바랍니다.", "2027년도 2월말", "가나다라", "100,000원", "(월)까지 교육혁신과로", "(예정) 일정", "(1234) 번호", "월. 화."]
+        {
             assert!(!starts_item(t), "{t}");
         }
     }

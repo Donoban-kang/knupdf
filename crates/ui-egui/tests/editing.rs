@@ -2202,6 +2202,7 @@ fn copying_out_of_a_document_honours_its_security() {
         "export.pptx",
         "export.html",
         "export.rtf",
+        "export.md",
         "export.all_images",
     ] {
         h.state_mut().toast = None;
