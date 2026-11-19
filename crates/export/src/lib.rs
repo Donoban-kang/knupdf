@@ -517,6 +517,147 @@ table{{border-collapse:collapse;margin:1em 0}}td,th{{border:1px solid #999;paddi
     s
 }
 
+/// KnuPdf: Markdown for reading by people, search and AI tools: headings, paragraphs (bold
+/// runs as `**…**`), tables as plain pipe tables and a `<!-- page N -->` mark where each page
+/// after the first begins. Pictures are left out and marked `[그림]`. A merged table cell is
+/// written once across its columns (the cells it also covers stay empty) and again in every row
+/// it spans, so each row reads on its own.
+pub fn markdown(pages: &[Page], title: &str) -> String {
+    let mut s = String::new();
+    let title = one_line(title);
+    if !title.is_empty() {
+        s.push_str(&format!("<!-- {} -->\n\n", title.replace("--", "- -")));
+    }
+    let mut page = 1usize;
+    for it in items(pages) {
+        match it {
+            Item::Para(b, lvl) => {
+                let mut t = String::new();
+                for r in b.styled() {
+                    let text = md_inline(&r.text);
+                    if r.bold && lvl == 0 && !text.trim().is_empty() {
+                        // The markers hug the text: `** a**` is not bold in Markdown.
+                        let lead = &text[..text.len() - text.trim_start().len()];
+                        let trail = &text[text.trim_end().len()..];
+                        t.push_str(&format!("{lead}**{}**{trail}", text.trim()));
+                    } else {
+                        t.push_str(&text);
+                    }
+                }
+                let t = md_line_start(t.trim());
+                if t.is_empty() {
+                    continue;
+                }
+                match lvl {
+                    0 => s.push_str(&format!("{t}\n\n")),
+                    l => s.push_str(&format!("{} {t}\n\n", "#".repeat(usize::from(l).min(6)))),
+                }
+            }
+            Item::Table(t) => s.push_str(&md_table(&t)),
+            Item::Img(_) => s.push_str("[그림]\n\n"),
+            Item::PageBreak => {
+                page = page.saturating_add(1);
+                s.push_str(&format!("<!-- page {page} -->\n\n"));
+            }
+        }
+    }
+    let trimmed = s.trim_end().len();
+    s.truncate(trimmed);
+    s.push('\n');
+    s
+}
+
+/// Most columns a Markdown table gets; a wider grid is cut there.
+const MD_MAX_COLS: usize = 64;
+/// Most cells a Markdown table gets.
+const MD_MAX_CELLS: usize = 100_000;
+
+/// A table as a pipe table: the first row is the header, merged cells unrolled (see
+/// [`markdown`]).
+fn md_table(t: &Table) -> String {
+    let cols = t.rows.iter().map(|r| r.iter().map(|c| c.span.max(1)).sum::<usize>()).max().unwrap_or(0).max(t.cols.len()).clamp(1, MD_MAX_COLS);
+    let rows = t.rows.len().min(MD_MAX_CELLS / cols);
+    if rows == 0 {
+        return String::new();
+    }
+    let mut grid: Vec<Vec<Option<String>>> = vec![vec![None; cols]; rows];
+    for (r, row) in t.rows.iter().take(rows).enumerate() {
+        let mut c = 0usize;
+        for cell in row {
+            // Skip the columns a cell from a row above already fills.
+            while c < cols && grid.get(r).and_then(|g| g.get(c)).is_some_and(Option::is_some) {
+                c += 1;
+            }
+            if c >= cols {
+                break;
+            }
+            let text = md_cell(&cell.text);
+            let span = cell.span.max(1).min(cols - c);
+            let down = cell.rowspan.max(1).min(rows - r);
+            for rr in r..r + down {
+                for cc in c..c + span {
+                    if let Some(slot) = grid.get_mut(rr).and_then(|g| g.get_mut(cc)) {
+                        // The text in the cell's first column of every row it spans.
+                        *slot = Some(if cc == c { text.clone() } else { String::new() });
+                    }
+                }
+            }
+            c += span;
+        }
+    }
+    let line = |row: &[Option<String>]| format!("| {} |\n", row.iter().map(|c| c.as_deref().unwrap_or("")).collect::<Vec<_>>().join(" | "));
+    let mut out = String::new();
+    for (i, row) in grid.iter().enumerate() {
+        out.push_str(&line(row));
+        if i == 0 {
+            out.push_str(&format!("|{}\n", " --- |".repeat(cols)));
+        }
+    }
+    out.push('\n');
+    out
+}
+
+/// Text on one line: line breaks and runs of spaces become one space.
+fn one_line(text: &str) -> String {
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// Inline text with the characters that would turn into emphasis, code or links escaped.
+fn md_inline(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut space = false;
+    for ch in text.chars() {
+        if ch.is_whitespace() {
+            if !space {
+                out.push(' ');
+            }
+            space = true;
+            continue;
+        }
+        space = false;
+        if matches!(ch, '\\' | '*' | '_' | '`' | '[' | ']' | '<') {
+            out.push('\\');
+        }
+        out.push(ch);
+    }
+    out
+}
+
+/// A paragraph whose start would read as a heading, quote, rule or table is escaped. List marks
+/// (`-`, `1.`) stay: they are lists in the document too.
+fn md_line_start(text: &str) -> String {
+    match text.chars().next() {
+        Some('#' | '>' | '|' | '=' | '+') => format!("\\{text}"),
+        _ if text.chars().all(|c| matches!(c, '-' | ' ')) && text.len() >= 3 => format!("\\{text}"),
+        _ => text.to_owned(),
+    }
+}
+
+/// A table cell's text: one line, inline escapes, `|` escaped.
+fn md_cell(text: &str) -> String {
+    md_inline(&one_line(text)).replace('|', "\\|")
+}
+
 /// A colour's 8-bit sRGB components (NaN and out-of-range values clamp; NaN reads as 0).
 pub(crate) fn rgb8(c: [f64; 3]) -> [u8; 3] {
     // The value is clamped to 0..=255 before the cast, so it cannot truncate.
@@ -1022,6 +1163,69 @@ mod tests {
         assert_eq!(h.matches("<hr>").count(), 1);
         assert_eq!(base64(b"Man"), "TWFu");
         assert_eq!(base64(b"Ma"), "TWE=");
+    }
+
+    /// KnuPdf: Markdown keeps the reading order, headings by size, the page mark and a stand-in
+    /// for each picture; characters that would turn into Markdown syntax are escaped.
+    #[test]
+    fn markdown_has_headings_paragraphs_page_marks_and_picture_marks() {
+        let run = |text: &str, bold: bool| Run { text: text.into(), bold, italic: false, color: [0.0; 3] };
+        let mut second = page();
+        second.blocks[0].text = "# not a heading, *not* emphasis, a_b [x] and 2 | 3, which is the body text of this page.".into();
+        second.blocks[3].text = "Please read the notice today, and the body text continues here a while.".into();
+        second.blocks[3].runs =
+            vec![run("Please read ", false), run("the notice ", true), run("today, and the body text continues here a while.", false)];
+        let m = markdown(&[page(), second], "Report -- 2026");
+        let order: Vec<usize> = [
+            "<!-- Report - - 2026 -->",
+            "# Annual Report\n",
+            "## Overview\n",
+            "Some \\<body> text & more",
+            "[그림]",
+            "Body text after",
+            "<!-- page 2 -->",
+        ]
+        .iter()
+        .map(|x| m.find(x).unwrap_or_else(|| panic!("{x} missing in {m}")))
+        .collect();
+        assert!(order.windows(2).all(|w| w[0] < w[1]), "{order:?}\n{m}");
+        assert_eq!(m.matches("[그림]").count(), 2);
+        assert!(!m.contains("base64") && !m.contains("<img"), "pictures are left out");
+        assert!(m.contains("Please read **the notice** today,"), "{m}");
+        assert!(m.contains("\\# not a heading, \\*not\\* emphasis, a\\_b \\[x\\] and 2 | 3"), "{m}");
+        assert!(m.ends_with(".\n") && !m.ends_with("\n\n"), "{m:?}");
+    }
+
+    /// KnuPdf: a table with a cell merged across columns and one merged down rows becomes a plain
+    /// pipe table: the across-merge keeps its text once, the down-merge repeats in every row.
+    #[test]
+    fn markdown_tables_unroll_merged_cells_and_escape_pipes() {
+        let cell = |t: &str, span: usize, rowspan: usize| Cell {
+            text: t.into(),
+            size: 10.0,
+            bold: false,
+            italic: false,
+            color: [0.0; 3],
+            span,
+            rowspan,
+            fill: None,
+        };
+        let t = Table {
+            rect: [72.0, 500.0, 372.0, 560.0],
+            cols: vec![72.0, 172.0, 272.0],
+            rows: vec![
+                vec![cell("구분", 1, 2), cell("2026년 실적", 2, 1)],
+                vec![cell("상반기", 1, 1), cell("하반기\n(예정)", 1, 1)],
+                vec![cell("합계", 1, 1), cell("a|b", 2, 1)],
+            ],
+            row_edges: Vec::new(),
+        };
+        assert_eq!(md_table(&t), "| 구분 | 2026년 실적 |  |\n| --- | --- | --- |\n| 구분 | 상반기 | 하반기 (예정) |\n| 합계 | a\\|b |  |\n\n");
+        // A hostile table: the grid stays bounded.
+        let wide = Table { rect: [0.0; 4], cols: Vec::new(), rows: vec![vec![cell("x", usize::MAX, usize::MAX)]], row_edges: Vec::new() };
+        let out = md_table(&wide);
+        assert_eq!(out.lines().next().map(|l| l.matches(" | ").count()), Some(MD_MAX_COLS - 1), "{out}");
+        assert_eq!(md_table(&Table { rect: [0.0; 4], cols: Vec::new(), rows: Vec::new(), row_edges: Vec::new() }), "");
     }
 
     #[test]

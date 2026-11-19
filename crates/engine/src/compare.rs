@@ -132,6 +132,8 @@ pub enum OfficeFormat {
     Pptx,
     Html,
     Rtf,
+    /// KnuPdf: Markdown for reading, search and AI tools (pictures left out).
+    Markdown,
 }
 
 impl OfficeFormat {
@@ -142,6 +144,7 @@ impl OfficeFormat {
             OfficeFormat::Pptx => "pptx",
             OfficeFormat::Html => "html",
             OfficeFormat::Rtf => "rtf",
+            OfficeFormat::Markdown => "md",
         }
     }
 
@@ -152,6 +155,7 @@ impl OfficeFormat {
             "pptx" => Some(OfficeFormat::Pptx),
             "html" | "htm" => Some(OfficeFormat::Html),
             "rtf" => Some(OfficeFormat::Rtf),
+            "md" | "markdown" => Some(OfficeFormat::Markdown),
             _ => None,
         }
     }
@@ -187,6 +191,48 @@ fn cut(rgba: &[u8], width: u32, height: u32, page_w: f64, page_h: f64, rect: [f6
     let bytes = crate::export::encode_png(cw, ch, &out).ok()?;
     let placed = [f64::from(x0) / sx, page_h - f64::from(y1) / sy, f64::from(x1) / sx, page_h - f64::from(y0) / sy];
     Some(pdfcraft_export::Image { ext: "png", bytes, rect: placed, size: [placed[2] - placed[0], placed[3] - placed[1]], rotation: 0.0 })
+}
+
+/// KnuPdf: the gap between two words, as a share of their line's height, that splits the line
+/// (a table's cell padding; an ordinary space is far less).
+const CELL_GAP: f64 = 0.6;
+
+/// KnuPdf: a line of text cut where a gap between its words is wider than [`CELL_GAP`] of the
+/// line's height (about 0.8 em), as a table's cell padding is (the words of two cells side by
+/// side read as one line), so each part lands in its own cell. An ordinary space is a quarter
+/// to a third of an em. A line whose words
+/// cannot be matched to their boxes, or that does not run left to right, stays whole.
+fn split_at_gaps(line: &pdfcraft_edit::TextLine) -> Vec<(String, [f64; 4])> {
+    let whole = || vec![(line.text.clone(), line.rect)];
+    let words: Vec<&str> = line.text.split_whitespace().collect();
+    if words.len() < 2 || words.len() != line.ink.len() {
+        return whole();
+    }
+    let height = line.rect[3] - line.rect[1];
+    let ordered = line.ink.windows(2).all(|w| w[1][0] >= w[0][0] && w[1][1] < w[0][3] && w[0][1] < w[1][3]);
+    if !(height.is_finite() && height > 0.0) || !ordered {
+        return whole();
+    }
+    let mut parts: Vec<(String, [f64; 4])> = Vec::new();
+    for (word, ink) in words.iter().zip(&line.ink) {
+        match parts.last_mut() {
+            Some((text, rect)) if ink[0] - rect[2] <= CELL_GAP * height => {
+                text.push(' ');
+                text.push_str(word);
+                *rect = [rect[0].min(ink[0]), rect[1].min(ink[1]), rect[2].max(ink[2]), rect[3].max(ink[3])];
+            }
+            _ => parts.push(((*word).to_owned(), *ink)),
+        }
+    }
+    if parts.len() < 2 {
+        return whole();
+    }
+    // The line's own box spans the whole height its text is set in.
+    for (_, rect) in &mut parts {
+        rect[1] = line.rect[1];
+        rect[3] = line.rect[3];
+    }
+    parts
 }
 
 /// KnuPdf: reads a rendered page (RGBA, width, height) into lines of words in its pixels, or
@@ -467,15 +513,21 @@ impl crate::Document {
                 .unwrap_or_default()
                 .into_iter()
                 .filter(|l| !l.text.trim().is_empty())
-                .map(|l| pdfcraft_export::TextLine {
-                    rect: visible_rect(l.rect),
-                    size: l.size * unit,
+                .flat_map(|l| {
                     // `ABCDEF+` marks a subset; the family is what follows.
-                    font: l.base_font.split_once('+').map_or(l.base_font.as_str(), |(_, f)| f).to_owned(),
-                    bold: l.bold,
-                    italic: l.italic,
-                    color: l.color,
-                    text: l.text,
+                    let font = l.base_font.split_once('+').map_or(l.base_font.as_str(), |(_, f)| f).to_owned();
+                    split_at_gaps(&l)
+                        .into_iter()
+                        .map(|(text, rect)| pdfcraft_export::TextLine {
+                            rect: visible_rect(rect),
+                            size: l.size * unit,
+                            font: font.clone(),
+                            bold: l.bold,
+                            italic: l.italic,
+                            color: l.color,
+                            text,
+                        })
+                        .collect::<Vec<_>>()
                 })
                 .chain(read_from_scan)
                 .collect();
@@ -510,9 +562,9 @@ impl crate::Document {
 
     pub(crate) fn export_office_read_with(&self, format: OfficeFormat, read: &ScanReader<'_>) -> (Vec<u8>, ScanReport) {
         let (mut pages, report) = self.export_pages_read_with(read);
-        // KnuPdf: both Hangul exports read the page's text lines and rules (ruled tables,
-        // paragraphs split at list marks); the other formats keep the plain text blocks.
-        if matches!(format, OfficeFormat::Hwpx | OfficeFormat::HwpxLayout) {
+        // KnuPdf: both Hangul exports and Markdown read the page's text lines and rules (ruled
+        // tables, paragraphs split at list marks); the other formats keep the plain text blocks.
+        if matches!(format, OfficeFormat::Hwpx | OfficeFormat::HwpxLayout | OfficeFormat::Markdown) {
             self.add_layout(&mut pages);
         }
         let title = self.info.title.clone().unwrap_or_else(|| self.name.trim_end_matches(".pdf").to_string());
@@ -523,6 +575,7 @@ impl crate::Document {
             OfficeFormat::Pptx => pdfcraft_export::pptx(&pages, &title),
             OfficeFormat::Html => pdfcraft_export::html(&pages, &title).into_bytes(),
             OfficeFormat::Rtf => pdfcraft_export::rtf(&pages).into_bytes(),
+            OfficeFormat::Markdown => pdfcraft_export::markdown(&pages, &title).into_bytes(),
         };
         (bytes, report)
     }
@@ -595,6 +648,13 @@ mod scan_tests {
             let text = unzip_text(&bytes);
             assert!(text.contains("공문 제목") && text.contains("둘째 줄"), "{format:?}");
         }
+        // KnuPdf: Markdown carries the read text too, and no picture stand-in for the scan.
+        let (md, report) = doc.export_office_read_with(OfficeFormat::Markdown, &read);
+        let md = String::from_utf8(md).unwrap();
+        // Line by line, as the Hangul export reads a page: these short lines end paragraphs.
+        assert!(md.contains("## 공문 제목") && md.contains("첫째 줄\n\n둘째 줄"), "{md}");
+        assert!(!md.contains("[그림]"), "{md}");
+        assert_eq!(report.recognized, vec![0]);
     }
 
     #[test]
@@ -629,5 +689,51 @@ mod scan_tests {
             at = start + size;
         }
         out
+    }
+}
+
+#[cfg(test)]
+mod cell_tests {
+    use super::*;
+    use crate::Session;
+
+    fn pdf(content: &str) -> Vec<u8> {
+        let objs = [
+            "<< /Type /Catalog /Pages 2 0 R >>".to_string(),
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_string(),
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>".to_string(),
+            format!("<< /Length {} >>\nstream\n{content}\nendstream", content.len()),
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>".to_string(),
+        ];
+        let mut out = b"%PDF-1.7\n".to_vec();
+        let mut offsets = Vec::new();
+        for (i, o) in objs.iter().enumerate() {
+            offsets.push(out.len());
+            out.extend_from_slice(format!("{} 0 obj\n{o}\nendobj\n", i + 1).as_bytes());
+        }
+        let xref = out.len();
+        out.extend_from_slice(format!("xref\n0 {}\n0000000000 65535 f \n", objs.len() + 1).as_bytes());
+        for o in offsets {
+            out.extend_from_slice(format!("{o:010} 00000 n \n").as_bytes());
+        }
+        out.extend_from_slice(format!("trailer << /Size {} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF", objs.len() + 1).as_bytes());
+        out
+    }
+
+    /// KnuPdf: two cells' words drawn as one line (the cell padding is a gap in it) each go to
+    /// their own cell; a sentence with ordinary spaces stays one line.
+    #[test]
+    fn words_of_neighbouring_cells_are_not_joined_into_one_cell() {
+        let rules = "0.5 w 72 690 m 272 690 l S 72 715 m 272 715 l S 72 740 m 272 740 l S \
+                     72 690 m 72 740 l S 172 690 m 172 740 l S 272 690 m 272 740 l S";
+        let text = "BT /F1 11 Tf 80 722 Td (Head) Tj 100 0 Td (Other) Tj ET \
+                    BT /F1 11 Tf 140 697 Td [(Left) -1500 (Right)] TJ ET \
+                    BT /F1 11 Tf 72 600 Td (A sentence with ordinary spaces) Tj ET";
+        let mut s = Session::new();
+        let id = s.open("cells.pdf", None, std::sync::Arc::new(pdf(&format!("{rules} {text}"))), None).unwrap();
+        let doc = s.get(id).unwrap();
+        let md = String::from_utf8(doc.export_office(OfficeFormat::Markdown)).unwrap();
+        assert!(md.contains("| Head | Other |\n| --- | --- |\n| Left | Right |"), "{md}");
+        assert!(md.contains("A sentence with ordinary spaces"), "{md}");
     }
 }

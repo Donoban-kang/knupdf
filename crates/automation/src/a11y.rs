@@ -709,7 +709,7 @@ impl Automation {
         let path = self.resolve(a.str("path")?, true)?;
         let ext = path.extension().map(|e| e.to_string_lossy().into_owned()).unwrap_or_default();
         let mut format = pdfcraft_engine::compare::OfficeFormat::from_extension(&ext)
-            .ok_or_else(|| ToolError::InvalidArgs(format!("unsupported extension {ext:?} (docx, hwpx, pptx, html or rtf)")))?;
+            .ok_or_else(|| ToolError::InvalidArgs(format!("unsupported extension {ext:?} (docx, hwpx, pptx, html, rtf or md)")))?;
         // KnuPdf: `layout: "keep"` writes Hangul that keeps each page as it is drawn.
         match a.opt_str("layout")? {
             None | Some("flow") => {}
