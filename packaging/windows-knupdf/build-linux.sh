@@ -37,16 +37,16 @@ fetch_model() {
   curl -sSfL -o "$STAGE/models/$file" "https://ocrs-models.s3-accelerate.amazonaws.com/$file"
   echo "$sha  $STAGE/models/$file" | sha256sum -c -
 }
-fetch_model text-detection.rten f15cfb56bd02c4bf478a20343986504a1f01e1665c2b3a0ad66340f054b1b5ca
-fetch_model text-recognition.rten e484866d4cce403175bd8d00b128feb08ab42e208de30e42cd9889d8f1735a6e
+fetch_model text-detection.onnx a917b23dbd9524b465df7e922641b3ff2981623df4ded5a0234004ef2fee7cfe
+fetch_model text-recognition.onnx 86c145c2edb96c8caed5b1ebb8f44d706408922211451c309c625157dd6061c5
 cat > "$STAGE/models/ATTRIBUTION.txt" <<'EOF'
 KnuPdf OCR models
 
-text-detection.rten   Ocrs text detection model
-text-recognition.rten Ocrs text recognition model
+text-detection.onnx   Ocrs text detection model
+text-recognition.onnx Ocrs text recognition model
 
 Author: Robert Knight (ocrs-models; trained on HierText)
-Source: https://github.com/robertknight/ocrs-models  (model card: https://huggingface.co/robertknight/ocrs)
+Source: https://github.com/robertknight/ocrs (ocrs/examples/download-models.sh; model card: https://huggingface.co/robertknight/ocrs)
 Licence: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
          https://creativecommons.org/licenses/by-sa/4.0/legalcode
 The files are unmodified.

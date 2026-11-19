@@ -80,6 +80,12 @@ packaging/windows-knupdf/build-linux.sh        # → dist/windows/ 에 setup.exe
    `makensis -DVERSION=0.8.4 -DSTAGE=<스테이징 폴더> -DOUT=KnuPdf-0.8.4-windows-x64-setup.exe packaging\windows-knupdf\knupdf.nsi`
 - WSL(Ubuntu)이 있으면 위 Linux 방식을 그대로 써도 됩니다.
 
+### OCR 모델 파일 변경 (2026-11-19)
+- ocrs 저자가 2026-10-27부터 `.rten` 모델(`text-detection.rten`, `text-recognition.rten`)의 내려받기를 막았습니다(robertknight/ocrs#282). 그 뒤로 S3 주소가 403을 돌려주어 `cargo xtask models`와 `build-linux.sh`가 실패했고, 이것이 2026-11-02부터 매주 실패한 "Windows ARM64" 워크플로의 원인이었습니다.
+- 원본 PdfCraft와 같은 방식으로 ONNX 모델(`text-detection.onnx`, `text-recognition.onnx`)로 바꿨습니다. `crates/ocr`의 rten에 `onnx_format` 기능을 켜고, `ATTRIBUTION.toml`·`build-linux.sh`·`packaging/windows/test-msi.ps1`의 파일 이름과 SHA-256을 고쳤습니다. 모델 라이선스(CC BY-SA 4.0)와 저자는 같습니다.
+- 0.8.4 이하 설치본의 `models\*.rten`은 새 버전에서 쓰이지 않습니다(그대로 남아도 해는 없음). 새 설치 파일은 `.onnx`를 넣습니다.
+- 저자가 "라이브러리 사용자는 모델을 직접 호스팅하라"고 안내하고 있으므로(ocrs#283), 이 주소도 언젠가 막힐 수 있습니다. 그때는 두 파일을 이 저장소의 Release 자산 등에 올리고 `ATTRIBUTION.toml`의 `url`만 바꾸면 됩니다(SHA-256은 그대로).
+
 ### 웹판
 ```sh
 cargo install trunk --locked          # 또는 trunk 릴리스 바이너리
