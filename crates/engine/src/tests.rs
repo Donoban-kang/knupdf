@@ -1148,6 +1148,7 @@ fn copy_restricted_documents_refuse_extraction_unless_opened_by_the_owner() {
         "export.pptx",
         "export.html",
         "export.rtf",
+        "export.md",
         "export.all_images",
     ];
     let enabled = |s: &Session, id, c| commands::is_enabled(commands::command(c).unwrap(), s, Some(id));

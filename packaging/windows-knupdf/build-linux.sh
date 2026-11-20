@@ -32,9 +32,19 @@ cp LICENSE-MIT LICENSE-APACHE NOTICE assets/fonts/OFL-KnupdfHangul.txt \
    packaging/windows-knupdf/LICENSE-KnuPdf.txt "$STAGE/"
 
 # OCR models (ATTRIBUTION.toml [[fetched]] kind = "model"), checked against their SHA-256.
+# The published URL has refused downloads (HTTP 403) since November 2026; set KNUPDF_MODELS_DIR
+# to a folder holding these two .onnx files (e.g. what `cargo xtask models` fetched earlier) to
+# build from those instead. A package built before the ONNX switch holds .rten files only, which
+# no longer match. Either way the file must match the pinned SHA-256.
 fetch_model() {
   local file="$1" sha="$2"
-  curl -sSfL -o "$STAGE/models/$file" "https://ocrs-models.s3-accelerate.amazonaws.com/$file"
+  if ! curl -sSfL -o "$STAGE/models/$file" "https://ocrs-models.s3-accelerate.amazonaws.com/$file"; then
+    if [ -z "${KNUPDF_MODELS_DIR:-}" ]; then
+      echo "error: could not download $file; set KNUPDF_MODELS_DIR to a folder that has it" >&2
+      return 1
+    fi
+    cp "$KNUPDF_MODELS_DIR/$file" "$STAGE/models/$file"
+  fi
   echo "$sha  $STAGE/models/$file" | sha256sum -c -
 }
 fetch_model text-detection.onnx a917b23dbd9524b465df7e922641b3ff2981623df4ded5a0234004ef2fee7cfe

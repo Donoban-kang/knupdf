@@ -56,9 +56,10 @@ ignore = [
     { id = "RUSTSEC-2026-0371", reason = "zbus_names unmaintained; Linux a11y stack via accesskit_unix" },
     { id = "RUSTSEC-2026-0372", reason = "zvariant_derive unmaintained; Linux a11y stack via accesskit_unix" },
     # chrono is unmaintained (published 2026-11; no vulnerability, every version affected, no
-    # release to move to). It reaches the tree through lopdf, pdfcraft-engine and the sigstore
-    # crates behind winprint. Upstream PdfCraft ignores it the same way until craft-libs pick a
-    # successor (storytold/pdfcraft#7647); revisit when upstream drops chrono.
+    # release to move to). It reaches the tree through lopdf, pdfcraft-engine (once, for the local
+    # UTC offset, "today") and the sigstore crates behind winprint. Upstream PdfCraft ignores it the
+    # same way until craft-libs pick a successor (storytold/pdfcraft#7647); revisit when upstream
+    # drops chrono, or replace that one call.
     { id = "RUSTSEC-2026-0543", reason = "chrono unmaintained; via lopdf, pdfcraft-engine and sigstore (upstream storytold/pdfcraft#7647)" },
 ]
 
