@@ -742,7 +742,7 @@ impl Renderer {
         }
     }
 
-    fn draw_image(&mut self, image_data: ImageData, alpha_data: Option<LumaData>) {
+    fn draw_image(&mut self, mut image_data: ImageData, mut alpha_data: Option<LumaData>) {
         let cur_transform = *self.ctx.transform();
         let (x_scale, y_scale) = {
             let (x, y) = x_y_advances(&cur_transform);
@@ -772,6 +772,37 @@ impl Renderer {
         {
             log::warn!("Image has invalid or over-limit source dimensions/data and was skipped");
             return;
+        }
+        // PdfCraft patch (scans): `/Interpolate` only asks for smoothing when an image is
+        // enlarged. A shrunk image is filtered whatever its flag (as Acrobat, poppler and pdf.js
+        // do); nearest-neighbour keeps one source sample in N and drops every stroke thinner than
+        // N pixels, so a scan's 1-bit text layer (300 ppi, no `/Interpolate`) came out broken and
+        // jagged. The filtered path also snaps the result to whole device pixels
+        // (`snap_minified_image`), which is what #624 wanted: no second, blurring sampling.
+        // Type 3 glyph images keep their own rule, and a source too large for the filter's
+        // budget stays on nearest-neighbour rather than falling back to its full resolution.
+        if !image_data.interpolate()
+            && !self.in_type3_glyph
+            && (x_scale < 1.0 || y_scale < 1.0)
+            && image_resampling_size(
+                source_width,
+                source_height,
+                channels,
+                data_len,
+                x_scale,
+                y_scale,
+                MAX_IMAGE_PIXELS,
+                true,
+            )
+            .is_some()
+        {
+            match &mut image_data {
+                ImageData::Luma(d) => d.interpolate = true,
+                ImageData::Rgb(d) => d.interpolate = true,
+            }
+            if let Some(a) = alpha_data.as_mut() {
+                a.interpolate = true;
+            }
         }
         let interpolate = image_data.interpolate();
         if let Some(a) = &alpha_data {
