@@ -1,9 +1,11 @@
 # KnuPdf 내려받기
 
+설치 파일은 [GitHub Releases](https://github.com/Donoban-kang/knupdf/releases)에 있어요(저장소에는 넣지 않아요). 아래 링크는 현재 버전을 바로 받아요.
+
 | 파일 | 크기 | 설명 | 내려받기 |
 |---|---|---|---|
-| `KnuPdf-0.8.6-windows-x64-setup.exe` | 32 MB | **설치 프로그램** (권장). 시작 메뉴·바탕 화면 바로 가기를 만들어요 | [⬇ 설치 파일 받기](https://github.com/Donoban-kang/knupdf/raw/main/downloads/KnuPdf-0.8.6-windows-x64-setup.exe) |
-| `KnuPdf-0.8.6-windows-x64-portable.zip` | 40 MB | **휴대용**. 설치 없이 압축을 풀고 `KnuPdf.exe` 실행. USB에 넣어 써도 돼요 | [⬇ 휴대용 zip 받기](https://github.com/Donoban-kang/knupdf/raw/main/downloads/KnuPdf-0.8.6-windows-x64-portable.zip) |
+| `KnuPdf-0.8.6-windows-x64-setup.exe` | 32 MB | **설치 프로그램** (권장). 시작 메뉴·바탕 화면 바로 가기를 만들어요 | [⬇ 설치 파일 받기](https://github.com/Donoban-kang/knupdf/releases/download/v0.8.6/KnuPdf-0.8.6-windows-x64-setup.exe) |
+| `KnuPdf-0.8.6-windows-x64-portable.zip` | 40 MB | **휴대용**. 설치 없이 압축을 풀고 `KnuPdf.exe` 실행. USB에 넣어 써도 돼요 | [⬇ 휴대용 zip 받기](https://github.com/Donoban-kang/knupdf/releases/download/v0.8.6/KnuPdf-0.8.6-windows-x64-portable.zip) |
 
 - 지원: Windows 10 / 11 64비트 · 버전 0.8.6 (시험판) · 만든이 강원대학교 강돈호 · 게시자 강원대학교
 - 설치 방법은 [쉬운 사용 설명서 미션 1](../docs/manual/README.md#미션-1-컴퓨터에-설치하기)을 보세요.

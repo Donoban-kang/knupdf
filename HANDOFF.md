@@ -15,7 +15,7 @@
 | 한국어 화면 | 완료. 번역 누락 0(테스트로 확인) |
 | 이름·아이콘·정보 창 | 완료. KnuPdf, K 타일 아이콘, "만든이: 강원대학교 강돈호", 게시자 강원대학교 |
 | Windows 설치 파일·휴대용 zip | 빌드 완료. **실제 Windows에서는 아직 미시험**(Wine에서 실행·창 제목·정보 창만 확인) |
-| 내려받기 | `downloads/`에 설치 파일·zip을 커밋해 README에서 바로 받게 함(임시). GitHub Releases는 **미등록**(6절). Releases에 올린 뒤에는 `downloads/`의 파일을 지우고 링크를 Releases로 바꾸는 것을 권장 |
+| 내려받기 | GitHub Releases(v0.8.4~)의 첨부 파일. README·사용 설명서·`downloads/README.md`는 태그별 직접 주소(`releases/download/v0.8.6/…`)로 연결하고, `downloads/`에는 확인값(`SHA256SUMS.txt`)과 안내만 둠. 바이너리는 저장소에 커밋하지 않음(`.gitignore`). pre-release는 `releases/latest` 주소가 통하지 않아 버전마다 링크를 고쳐야 함(6절) |
 | 웹판 | claude.ai Artifact로 비공개 게시: https://claude.ai/artifact/CzyCoaMnWXithtxtsuF2hq |
 | 한국 개인정보 가리기 | 완료. PDF 가리기 → 텍스트 찾아 가리기 → 패턴 → "한국 개인정보 전체"(기본값) 또는 항목별 |
 | 한글(HWPX) 내보내기 | 완료. PDF 내보내기 → 내보낼 형식 → "한글 (.hwpx)"(고쳐 쓰기 좋은 흐름 방식) 또는 "한글 (.hwpx) - 원본 모양 그대로"(PDF와 같은 배치). **실제 한컴오피스 한글에서는 아직 미시험**(구조 검사 도구와 자체 미리보기로만 확인) |
@@ -127,12 +127,18 @@ git commit -am "Sync PdfCraft upstream to <새 원본 커밋>"
 
 ## 6. GitHub Releases에 설치 파일 올리기 (수동)
 
-작업한 클라우드 세션에서는 릴리스 생성이 막혀 있어 직접 올려야 합니다.
+작업한 클라우드 세션에서는 릴리스 생성이 막혀 있어 직접 올려야 합니다. 설치 파일은 **저장소에 커밋하지 않고** 릴리스 첨부 파일로만 둡니다(0.8.5까지는 `downloads/`에 커밋했고, 그 이력은 남아 있습니다).
 1. https://github.com/Donoban-kang/knupdf/releases/new 를 엽니다.
 2. 태그 `v0.8.6`을 만들고, 대상은 `main`으로 둡니다. 제목은 `KnuPdf 0.8.6 (시험판)`으로 합니다.
 3. 설명은 `packaging/windows-knupdf/RELEASE-NOTES-0.8.6.md` 내용을 붙여 넣습니다. 파일 확인값(SHA-256)은 새로 빌드한 파일 기준으로 고칩니다. 릴리스 페이지에서는 상대 주소 링크가 열리지 않으므로, 노트 안의 링크는 `https://github.com/Donoban-kang/knupdf/blob/main/...` 같은 전체 주소로 씁니다.
-4. `KnuPdf-0.8.6-windows-x64-setup.exe`와 `...-portable.zip`을 첨부합니다.
+4. `KnuPdf-0.8.6-windows-x64-setup.exe`와 `...-portable.zip`을 첨부합니다(`build-linux.sh`가 `dist/windows/`에 만듭니다).
 5. Set as a pre-release에 체크한 뒤 Publish release를 누릅니다.
+
+### 새 버전을 낼 때 고칠 곳
+- 버전: `cargo xtask version set <새 버전>`, 루트 `Cargo.toml`의 내부 크레이트 `version = "…"`, `packaging/windows-knupdf/knupdf.nsi` 머리말.
+- 내려받기 링크의 `v0.8.6`과 파일 이름: `README.md`, `docs/manual/README.md`, `docs/manual/index.html`, `downloads/README.md`.
+- 확인값: `downloads/SHA256SUMS.txt`, `downloads/README.md`, 새 `RELEASE-NOTES-<버전>.md`.
+- 릴리스를 **먼저 게시한 뒤** 링크를 바꾼 PR을 머지합니다. 순서가 바뀌면 그 사이 링크가 404입니다.
 
 ## 7. 점검 방법
 
