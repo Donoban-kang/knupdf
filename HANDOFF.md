@@ -3,10 +3,10 @@
 다른 PC에서, 또는 다른 사람·AI 도구가 이어서 작업할 때 처음 읽는 문서입니다.
 무엇을 왜 만드는지는 [KnuPdf-PRD.md](KnuPdf-PRD.md)에 있습니다.
 
-- 마지막 갱신: 2026-11-26 (0.8.7: 인쇄 중 프로그램이 닫히던 문제 수정(인쇄 래스터 300dpi 고정), url 2.5.9 보안 업데이트)
+- 마지막 갱신: 2026-11-26 (0.8.8: Windows 인쇄를 KnuPdf 렌더러 + GDI 띠 인쇄로 교체, 흐림·프로그램 종료 해결)
 - 담당: 강돈호
 - 저장소: https://github.com/Donoban-kang/knupdf (`main`)
-- 현재 버전: 0.8.7 (0.8.0은 원본 PdfCraft 버전을 따랐고, 0.8.1부터 KnuPdf 수정 배포마다 올림)
+- 현재 버전: 0.8.8 (0.8.0은 원본 PdfCraft 버전을 따랐고, 0.8.1부터 KnuPdf 수정 배포마다 올림)
 
 ## 1. 한눈에 보는 현재 상태
 
@@ -15,7 +15,7 @@
 | 한국어 화면 | 완료. 번역 누락 0(테스트로 확인) |
 | 이름·아이콘·정보 창 | 완료. KnuPdf, K 타일 아이콘, "만든이: 강원대학교 강돈호", 게시자 강원대학교 |
 | Windows 설치 파일·휴대용 zip | 빌드 완료. 0.8.6은 담당자가 **실제 Windows에서 실행을 확인**함(2026-11-22). 설치·제거·인쇄·합치기·가리기·암호 등 나머지 점검표는 기록이 없어 남아 있음(9절 1) |
-| 내려받기 | GitHub Releases(v0.8.4~)의 첨부 파일. README·사용 설명서·`downloads/README.md`는 태그별 직접 주소(`releases/download/v0.8.7/…`)로 연결하고, `downloads/`에는 확인값(`SHA256SUMS.txt`)과 안내만 둠. 바이너리는 저장소에 커밋하지 않음(`.gitignore`). pre-release는 `releases/latest` 주소가 통하지 않아 버전마다 링크를 고쳐야 함(6절) |
+| 내려받기 | GitHub Releases(v0.8.4~)의 첨부 파일. README·사용 설명서·`downloads/README.md`는 태그별 직접 주소(`releases/download/v0.8.8/…`)로 연결하고, `downloads/`에는 확인값(`SHA256SUMS.txt`)과 안내만 둠. 바이너리는 저장소에 커밋하지 않음(`.gitignore`). pre-release는 `releases/latest` 주소가 통하지 않아 버전마다 링크를 고쳐야 함(6절) |
 | 스캔 문서 표시 | 0.8.6에서 수정: 줄여서 보이는 그림은 `/Interpolate`와 무관하게 필터링해, 스캐너 문서의 가는 글자 획이 끊기던 문제를 고침. **합성 변형으로만 폭넓게 확인했고 다른 장비의 실제 스캔은 미확인**(10절 기록) |
 | CI | 알려진 실패 2건(windows-arm64 package, FreeBSD)은 `main`에서도 계속 실패하며 **진행하지 않기로 결정**(2026-11-22, 4절). 새 PR에서 이 둘만 빨간색이면 기존 문제임 |
 | 웹판 | claude.ai Artifact로 비공개 게시: https://claude.ai/artifact/CzyCoaMnWXithtxtsuF2hq |
@@ -84,7 +84,7 @@ packaging/windows-knupdf/build-linux.sh        # → dist/windows/ 에 setup.exe
 3. 스테이징 폴더를 만듭니다. 들어갈 파일은 `build-linux.sh`와 같습니다.
    - `KnuPdf.exe`(위 exe 이름 변경), `KnuPdf.ico`, 라이선스 파일들, `models\`(OCR 모델 2개와 `ATTRIBUTION.txt`)
 4. 다음 명령으로 설치 파일을 만듭니다.
-   `makensis -DVERSION=0.8.7 -DSTAGE=<스테이징 폴더> -DOUT=KnuPdf-0.8.7-windows-x64-setup.exe packaging\windows-knupdf\knupdf.nsi`
+   `makensis -DVERSION=0.8.8 -DSTAGE=<스테이징 폴더> -DOUT=KnuPdf-0.8.8-windows-x64-setup.exe packaging\windows-knupdf\knupdf.nsi`
 - WSL(Ubuntu)이 있으면 위 Linux 방식을 그대로 써도 됩니다.
 
 ### OCR 모델 파일 변경 (2026-11-19)
@@ -150,9 +150,9 @@ git commit -am "Sync PdfCraft upstream to <새 원본 커밋>"
 
 작업한 클라우드 세션에서는 릴리스 생성이 막혀 있어 직접 올려야 합니다. 설치 파일은 **저장소에 커밋하지 않고** 릴리스 첨부 파일로만 둡니다(0.8.5까지는 `downloads/`에 커밋했고, 그 이력은 남아 있습니다).
 1. https://github.com/Donoban-kang/knupdf/releases/new 를 엽니다.
-2. 태그 `v0.8.7`을 만들고, 대상은 `main`으로 둡니다. 제목은 `KnuPdf 0.8.7 (시험판)`으로 합니다.
-3. 설명은 `packaging/windows-knupdf/RELEASE-NOTES-0.8.7.md` 내용을 붙여 넣습니다. 파일 확인값(SHA-256)은 새로 빌드한 파일 기준으로 고칩니다. 릴리스 페이지에서는 상대 주소 링크가 열리지 않으므로, 노트 안의 링크는 `https://github.com/Donoban-kang/knupdf/blob/main/...` 같은 전체 주소로 씁니다.
-4. `KnuPdf-0.8.7-windows-x64-setup.exe`와 `...-portable.zip`을 첨부합니다(`build-linux.sh`가 `dist/windows/`에 만듭니다).
+2. 태그 `v0.8.8`을 만들고, 대상은 `main`으로 둡니다(관련 PR이 모두 병합된 뒤 만듭니다). 제목은 `KnuPdf 0.8.8 (시험판)`으로 합니다.
+3. 설명은 `packaging/windows-knupdf/RELEASE-NOTES-0.8.8.md` 내용을 붙여 넣습니다. 파일 확인값(SHA-256)은 새로 빌드한 파일 기준으로 고칩니다. 릴리스 페이지에서는 상대 주소 링크가 열리지 않으므로, 노트 안의 링크는 `https://github.com/Donoban-kang/knupdf/blob/main/...` 같은 전체 주소로 씁니다.
+4. `KnuPdf-0.8.8-windows-x64-setup.exe`와 `...-portable.zip`을 첨부합니다(`build-linux.sh`가 `dist/windows/`에 만듭니다).
 5. Set as a pre-release에 체크한 뒤 Publish release를 누릅니다.
 
 ### 새 버전을 낼 때 고칠 곳
@@ -180,7 +180,7 @@ git commit -am "Sync PdfCraft upstream to <새 원본 커밋>"
 
 1. **실제 Windows 점검**(PRD F-01). 문제가 있으면 Issues에 기록합니다. 0.8.6의 실행은 확인했습니다(2026-11-22). 설치·제거·인쇄·합치기·가리기·암호 점검표가 남았고, 스캔 PDF에서 가는 획(`~` 등)이 Windows 화면에서도 온전한지 함께 봅니다.
    - **인쇄 선명도**: 글자가 흐리게 인쇄된다는 보고가 있었습니다. Direct2D가 그림으로 바꿔 그리는 부분의 해상도를 300~600dpi로 고정했습니다(`vendor/winprint`, `raster_dpi`). 실제 프린터에서 확인되지 않았습니다. 여전히 흐리면 프린터 드라이버의 인쇄 품질(초안·절약 모드)과 "이미지로 인쇄 600dpi"를 비교해 봅니다.
-2. **GitHub Releases**: v0.8.4~v0.8.7 등록 완료. 새 버전마다 6절 절차를 따릅니다(세션에서는 릴리스를 만들 수 없어 직접 게시).
+2. **GitHub Releases**: v0.8.4~v0.8.8 등록 완료. 새 버전마다 6절 절차를 따릅니다(세션에서는 릴리스를 만들 수 없어 직접 게시).
 3. **한국 개인정보 가리기 보완**(F-02 후속): 실제 기관 문서로 오탐·누락 점검, 필요한 패턴(건강보험증 번호 등) 추가.
    - 코드: `crates/redact/src/patterns.rs`. 테스트: `cargo test -p pdfcraft-redact --lib patterns`
    - 명령줄로 확인: `pdfcraft-cli run --script steps.json` (doc_open → redact_mark `pattern: kr-all` → redact_apply → doc_save)
@@ -205,6 +205,13 @@ git commit -am "Sync PdfCraft upstream to <새 원본 커밋>"
 | Windows 설치 파일·휴대용 zip | GitHub Releases https://github.com/Donoban-kang/knupdf/releases (v0.8.4~). `build-linux.sh`로 다시 만들 수 있음(빌드 결과는 저장소에 넣지 않음) |
 | 웹판 | https://claude.ai/artifact/CzyCoaMnWXithtxtsuF2hq (비공개, 소유자만 열람) |
 | 화면 디자인 시안 | claude.ai Artifact "KNUPDF 화면 디자인 (강원대 블루)", "KNUPDF UI 개편 — 시작·작업 화면" |
+
+### 0.8.8 작업 기록 (2026-11-26)
+
+| 항목 | 내용 |
+|---|---|
+| 인쇄 | 0.8.7(300dpi 고정)에서 인쇄는 됐지만 글자가 흐렸고, "이미지로 인쇄 600dpi"도 흐렸으며, 이어서 300dpi로 인쇄하자 프로그램이 닫힘. 원인 추정: Windows.Data.Pdf + Direct2D 인쇄 컨트롤이 쪽 전체를 한 해상도로 래스터화(상한)하고 프로세스 안에서 실행됨. #24에서 Windows 인쇄를 **KnuPdf 렌더러 + GDI 띠 인쇄**로 교체: `vendor/craft-print`(새로 vendor, `submit_rendered`, `bands.rs`), `vendor/winprint` `printer::gdi::GdiPrintJob`, `pdfcraft-print` `spool.rs`. 300~600dpi, 띠 최대 4096×1024, 빈 부분 생략, 가로 쪽 회전, 인쇄 스레드 스택 64 MiB. 담당자가 같은 복합기에서 **인쇄·선명도 확인**(2026-11-26). 다른 프린터·대용량 문서 속도는 미확인 |
+| 원본 갱신 | `vendor/craft-print`는 craft-libs 666c358 기준. 원본 craft-print를 올릴 때 이 vendor와 `Cargo.toml`의 `[patch."https://github.com/storytold/craft-libs"]`를 함께 검토 |
 
 ### 0.8.7 작업 기록 (2026-11-26)
 
