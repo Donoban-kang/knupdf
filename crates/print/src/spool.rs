@@ -56,13 +56,50 @@ pub(crate) fn printer_options_via(printer: &str, ppd_dir: &std::path::Path, mut 
 }
 
 pub fn submit(pdf: &[u8], job: &Job) -> Result<String, crate::PrintError> {
-    craft_print::submit(pdf, job).map_err(|e| crate::PrintError::Spool(e.to_string()))
+    submit_with_progress(pdf, job, &mut |_, _| {})
 }
 
 /// [`submit`], told `(sent, sheets)` as each sheet reaches the spooler (Windows; CUPS takes the
 /// whole PDF at once and reports nothing).
+///
+/// KnuPdf: on Windows every sheet is drawn by our own renderer, as on screen, at the printer's
+/// resolution (300 to 600 dpi) and sent to the driver as pixels a band at a time
+/// ([`craft_print::submit_rendered`]). Windows' own PDF path rasterized through Direct2D at one
+/// resolution for the whole page: soft text at 300 dpi, and at 600 dpi an office PCL 6 printer
+/// closed the program.
 pub fn submit_with_progress(pdf: &[u8], job: &Job, progress: &mut dyn FnMut(usize, usize)) -> Result<String, crate::PrintError> {
-    craft_print::submit_with_progress(pdf, job, progress).map_err(|e| crate::PrintError::Spool(e.to_string()))
+    craft_print::submit_rendered(pdf, job, progress, &rasterize).map_err(|e| crate::PrintError::Spool(e.to_string()))
+}
+
+/// The [`craft_print::Rasterizer`]: the print-ready PDF parsed once, its sheets drawn in bands.
+pub(crate) fn rasterize(pdf: Vec<u8>) -> Result<Box<dyn craft_print::SheetPainter>, String> {
+    let renderer = pdfcraft_render::PageRenderer::new(std::sync::Arc::new(pdf), pdfcraft_render::RenderConfig::default());
+    if renderer.page_count() == 0 {
+        return Err("the print-ready PDF could not be read".into());
+    }
+    Ok(Box::new(Painter(renderer)))
+}
+
+struct Painter(pdfcraft_render::PageRenderer);
+
+impl craft_print::SheetPainter for Painter {
+    fn band(&mut self, sheet: usize, scale: f64, x: u32, y: u32, w: u32, h: u32) -> Result<Vec<u8>, String> {
+        let page = self.0.render(pdfcraft_render::RenderRequest {
+            page: sheet,
+            tile: Some(pdfcraft_render::Tile { x, y, w, h }),
+            scale: scale as f32,
+            // The document's true colours, whatever the reading colours on screen.
+            tag: pdfcraft_render::PRINT_TAG,
+            ..Default::default()
+        });
+        if let Some(e) = page.error {
+            return Err(e);
+        }
+        if (page.width, page.height) != (w, h) {
+            return Err(format!("the renderer drew {}×{} pixels for a {w}×{h} band", page.width, page.height));
+        }
+        Ok(page.rgba.as_ref().to_vec())
+    }
 }
 
 pub fn open_printer_preferences(printer: &str) -> Result<(), crate::PrintError> {
