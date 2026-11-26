@@ -174,7 +174,7 @@ git commit -am "Sync PdfCraft upstream to <새 원본 커밋>"
 
 1. **실제 Windows 점검**(PRD F-01). 문제가 있으면 Issues에 기록합니다. 0.8.6의 실행은 확인했습니다(2026-11-22). 설치·제거·인쇄·합치기·가리기·암호 점검표가 남았고, 스캔 PDF에서 가는 획(`~` 등)이 Windows 화면에서도 온전한지 함께 봅니다.
    - **인쇄 선명도**: 글자가 흐리게 인쇄된다는 보고가 있었습니다. Direct2D가 그림으로 바꿔 그리는 부분의 해상도를 300~600dpi로 고정했습니다(`vendor/winprint`, `raster_dpi`). 실제 프린터에서 확인되지 않았습니다. 여전히 흐리면 프린터 드라이버의 인쇄 품질(초안·절약 모드)과 "이미지로 인쇄 600dpi"를 비교해 봅니다.
-2. **GitHub Releases**: v0.8.4~v0.8.6 등록 완료(v0.8.7은 게시 대기). 새 버전마다 6절 절차를 따릅니다(세션에서는 릴리스를 만들 수 없어 직접 게시).
+2. **GitHub Releases**: v0.8.4~v0.8.7 등록 완료. 새 버전마다 6절 절차를 따릅니다(세션에서는 릴리스를 만들 수 없어 직접 게시).
 3. **한국 개인정보 가리기 보완**(F-02 후속): 실제 기관 문서로 오탐·누락 점검, 필요한 패턴(건강보험증 번호 등) 추가.
    - 코드: `crates/redact/src/patterns.rs`. 테스트: `cargo test -p pdfcraft-redact --lib patterns`
    - 명령줄로 확인: `pdfcraft-cli run --script steps.json` (doc_open → redact_mark `pattern: kr-all` → redact_apply → doc_save)
@@ -204,7 +204,7 @@ git commit -am "Sync PdfCraft upstream to <새 원본 커밋>"
 
 | 항목 | 내용 |
 |---|---|
-| 인쇄 | 증상: PCL 6 네트워크 복합기(DocuCentre-VII C3373)에서 "용지 2장 중 1장을 보내는 중 0%"에서 멈춘 뒤 프로그램 종료. 추정 원인: 0.8.2(#7)에서 Direct2D 래스터 해상도를 드라이버 값(최대 600dpi)으로 올려 A4 한 장이 약 3,500만 화소가 됨(150dpi의 16배). #22에서 `vendor/winprint` `raster_dpi`를 300dpi로 고정. **실제 프린터 확인 전**. 300dpi로도 닫히면 다른 원인(드라이버, Direct2D 하드웨어 장치 등)을 봐야 함 |
+| 인쇄 | 증상: PCL 6 네트워크 복합기(DocuCentre-VII C3373)에서 "용지 2장 중 1장을 보내는 중 0%"에서 멈춘 뒤 프로그램 종료. 추정 원인: 0.8.2(#7)에서 Direct2D 래스터 해상도를 드라이버 값(최대 600dpi)으로 올려 A4 한 장이 약 3,500만 화소가 됨(150dpi의 16배). #22에서 `vendor/winprint` `raster_dpi`를 300dpi로 고정. 담당자가 같은 복합기로 **인쇄 성공을 확인**(2026-11-26). 300dpi로도 닫히면 다른 원인(드라이버, Direct2D 하드웨어 장치 등)을 봐야 함 |
 | 보안 | url 2.5.8 → 2.5.9(RUSTSEC-2026-0592) |
 
 ### 0.8.6 작업 기록 (2026-11-22)
