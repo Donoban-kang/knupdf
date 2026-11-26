@@ -13,4 +13,6 @@ craft-print = { workspace = true }
 pdfcraft-cos = { workspace = true }
 pdfcraft-content = { workspace = true }
 pdfcraft-model = { workspace = true }
+# KnuPdf: Windows jobs are drawn by our renderer and printed as pixels (spool.rs).
+pdfcraft-render = { workspace = true }
 thiserror = { workspace = true }

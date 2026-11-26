@@ -1,6 +1,7 @@
 mod device;
 mod dxgi;
 mod file;
+mod gdi;
 mod image;
 #[cfg(feature = "pdfium")]
 mod pdfium;
@@ -10,6 +11,7 @@ mod xps;
 pub use device::PrinterDevice;
 pub use dxgi::{DxgiPrintContext, DxgiPrintContextError};
 pub use file::FilePrinter;
+pub use gdi::{GdiPage, GdiPrintError, GdiPrintJob};
 pub use image::{ImagePrinter, ImagePrinterError};
 #[cfg(feature = "pdfium")]
 pub use pdfium::{PdfiumPrinter, PdfiumPrinterError};

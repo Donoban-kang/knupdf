@@ -752,3 +752,34 @@ fn imposed_pages_preserve_large_user_unit_matrices() {
         }
     }
 }
+
+/// KnuPdf: Windows prints the print-ready PDF as pixels drawn by our renderer, a band at a time.
+/// A band comes back at its exact size as premultiplied RGBA, with the page's ink in it, and a
+/// band of blank paper is white.
+#[test]
+fn print_bands_are_drawn_by_our_renderer_at_their_size() {
+    let out = impose(&fixture(1), &settings(vec![0], Layout::Size(SizeMode::Fit))).unwrap();
+    let mut painter = crate::spool::rasterize(out).unwrap();
+    let scale = 600.0 / 72.0;
+    let (width, height) = ((612.0f64 * scale).ceil() as u32, (792.0f64 * scale).ceil() as u32);
+    let mut inked = 0usize;
+    let mut y = 0;
+    while y < height {
+        let h = 1024.min(height - y);
+        let mut x = 0;
+        while x < width {
+            let w = 4096.min(width - x);
+            let rgba = painter.band(0, scale, x, y, w, h).unwrap();
+            assert_eq!(rgba.len(), (w * h * 4) as usize);
+            if rgba.chunks_exact(4).any(|p| p[3] == 255 && (p[0] < 128 || p[1] < 128 || p[2] < 128)) {
+                inked += 1;
+            }
+            x += w;
+        }
+        y += h;
+    }
+    assert!(inked >= 1, "the page's text and comment are in some band");
+    assert!(inked < 14, "blank bands stay white");
+    assert!(painter.band(5, scale, 0, 0, 10, 10).is_err(), "a sheet past the end is an error, not a panic");
+    assert!(crate::spool::rasterize(b"not a pdf".to_vec()).is_err());
+}

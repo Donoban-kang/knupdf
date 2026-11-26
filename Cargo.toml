@@ -118,3 +118,6 @@ vello_common = { path = "vendor/vello_common" }
 # The Windows print path (through craft-print): printed text no longer falls to 150 dpi.
 [patch."https://github.com/storytold/winprint.rs"]
 winprint = { path = "vendor/winprint" }
+# KnuPdf: Windows jobs are rasterized by our renderer and printed through GDI in bands.
+[patch."https://github.com/storytold/craft-libs"]
+craft-print = { path = "vendor/craft-print" }
