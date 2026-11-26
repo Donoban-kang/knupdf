@@ -9,6 +9,8 @@ KnuPdf 0.8.8 시험판입니다. 0.8.7에서 바뀐 점만 적었습니다. 기�
   - 확인한 범위: 문제가 났던 복합기(DocuCentre-VII C3373, PCL 6)에서 인쇄되고 글자가 선명한 것을 확인했습니다. 다른 프린터에서는 아직 확인하지 못했습니다.
   - 알아둘 점: 600dpi로 그리기 때문에 쪽 수가 많은 문서는 프린터로 보내는 데 이전보다 시간이 더 걸릴 수 있습니다.
 
+- **글자 인식(OCR) 모델 형식 변경**: OCR 모델 제작자가 기존 형식(.rten) 내려받기를 중단해, 같은 모델의 ONNX판으로 바꿨습니다(#16). 인식 결과는 같은 모델이라 달라지지 않아야 하지만, 스캔 문서 변환 결과는 원본과 대조해 확인하세요.
+
 ## 내려받기 (Windows 10/11, 64비트)
 
 | 파일 | 용도 |
@@ -21,6 +23,6 @@ KnuPdf 0.8.8 시험판입니다. 0.8.7에서 바뀐 점만 적었습니다. 기�
 ## 파일 확인값 (SHA-256)
 
 ```
-SETUP_SHA  KnuPdf-0.8.8-windows-x64-setup.exe
-ZIP_SHA  KnuPdf-0.8.8-windows-x64-portable.zip
+7f0c841156c68efbbd1435b0ccfb633710a89f96b085a87678756ebe813f5a3c  KnuPdf-0.8.8-windows-x64-setup.exe
+7ef874ee7a8d6ef8cd37e79d9fe48ae459bea1e569ede423c4c3cd50ea43da3a  KnuPdf-0.8.8-windows-x64-portable.zip
 ```
