@@ -67,19 +67,19 @@ pub enum DxgiPrintContextError {
 }
 
 /// PdfCraft patch: the resolution for what Direct2D cannot print as vectors (it rasterizes
-/// those parts of a page), when the driver does not say.
-const DEFAULT_DPI: f32 = 600.0;
-/// PdfCraft patch: the least and the most rasterized parts are drawn at. Below 300 dpi text
-/// that Direct2D had to rasterize prints with soft grey edges; past 600 the spool grows with no
-/// visible gain on office printers.
+/// those parts of a page), whatever the driver says. Below 300 dpi text that Direct2D had to
+/// rasterize prints with soft grey edges. KnuPdf: 600 dpi (an office printer's usual
+/// resolution) made each A4 page a 35-megapixel raster, four times 300 dpi's; on a PCL 6
+/// network printer the first sheet never reached the spooler and the program closed.
+const DEFAULT_DPI: f32 = 300.0;
 const MIN_RASTER_DPI: f32 = 300.0;
-const MAX_RASTER_DPI: f32 = 600.0;
+const MAX_RASTER_DPI: f32 = 300.0;
 
 /// PdfCraft patch: the rasterization DPI from the DEVMODE's `dmPrintQuality` (x) and
 /// `dmYResolution` (y). `dmPrintQuality` may hold a negative `DMRES_*` quality constant rather
 /// than dots per inch (`DMRES_HIGH` is -4); upstream passed that on, and Direct2D treats any
 /// value below 1 as its default of 150 dpi, which printed text blurred. Only positive
-/// resolutions count, and the result is kept within 300 to 600 dpi.
+/// resolutions count, and the result is kept at 300 dpi (see [`MAX_RASTER_DPI`]).
 pub(crate) fn raster_dpi(dpi_x: Option<i16>, dpi_y: Option<i16>) -> f32 {
     let dots = |v: Option<i16>| v.filter(|d| *d > 0).map(f32::from);
     match (dots(dpi_x), dots(dpi_y)) {
@@ -280,18 +280,18 @@ mod raster_dpi_tests {
     /// PdfCraft patch: a quality constant is not a resolution (it fell to Direct2D's 150 dpi).
     #[test]
     fn quality_constants_are_not_resolutions() {
-        assert_eq!(raster_dpi(Some(-4), None), 600.0, "DMRES_HIGH alone");
-        assert_eq!(raster_dpi(Some(-3), Some(0)), 600.0, "DMRES_MEDIUM and an empty y");
-        assert_eq!(raster_dpi(Some(-4), Some(600)), 600.0);
-        assert_eq!(raster_dpi(None, None), 600.0);
+        assert_eq!(raster_dpi(Some(-4), None), 300.0, "DMRES_HIGH alone");
+        assert_eq!(raster_dpi(Some(-3), Some(0)), 300.0, "DMRES_MEDIUM and an empty y");
+        assert_eq!(raster_dpi(Some(-4), Some(600)), 300.0);
+        assert_eq!(raster_dpi(None, None), 300.0);
     }
 
+    /// KnuPdf: 600 dpi rasters closed the program on an office printer; 300 is the most.
     #[test]
-    fn the_printers_resolution_is_kept_within_300_to_600() {
+    fn the_printers_resolution_is_kept_at_300() {
         assert_eq!(raster_dpi(Some(300), Some(300)), 300.0);
-        assert_eq!(raster_dpi(Some(600), Some(600)), 600.0);
+        assert_eq!(raster_dpi(Some(600), Some(600)), 300.0, "an office printer's 600 dpi is lowered");
         assert_eq!(raster_dpi(Some(150), None), 300.0, "a draft resolution is raised");
-        assert_eq!(raster_dpi(Some(1200), Some(1200)), 600.0, "a photo resolution is capped");
-        assert_eq!(raster_dpi(Some(600), Some(1200)), 600.0);
+        assert_eq!(raster_dpi(Some(1200), Some(1200)), 300.0, "a photo resolution is capped");
     }
 }
