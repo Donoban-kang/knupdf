@@ -5,6 +5,7 @@ edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/storytold/craft-libs"
 rust-version = "1.95"
+publish = false
 description = "System PDF print spooler for the Craft apps: CUPS and Windows"
 
 [lints.rust]
@@ -18,7 +19,7 @@ todo = "warn"
 # Printing without starting anything (storytold/pdfcraft#1107): the printer list (EnumPrinters)
 # and the job are safe wrappers over Win32 and WinRT (BSD-3-Clause). Its default `pdfium`
 # feature downloads PDFium at build time and is off. KnuPdf: patched to vendor/winprint.
-winprint = { git = "https://github.com/storytold/winprint.rs", rev = "5f80b9baf6b58937c401656634e42d33f00ddf49", default-features = false }
+winprint = { git = "https://github.com/storytold/winprint.rs", version = "0.2.1", rev = "5f80b9baf6b58937c401656634e42d33f00ddf49", default-features = false }
 # GetDefaultPrinter (MIT).
 winsafe = { version = "0.0.29", default-features = false, features = ["winspool"] }
 # The job file's private folder.

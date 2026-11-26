@@ -771,7 +771,7 @@ fn print_bands_are_drawn_by_our_renderer_at_their_size() {
             let w = 4096.min(width - x);
             let rgba = painter.band(0, scale, x, y, w, h).unwrap();
             assert_eq!(rgba.len(), (w * h * 4) as usize);
-            if rgba.chunks_exact(4).any(|p| p[3] == 255 && (p[0] < 128 || p[1] < 128 || p[2] < 128)) {
+            if rgba.as_chunks::<4>().0.iter().any(|&[r, g, b, a]| a == 255 && (r < 128 || g < 128 || b < 128)) {
                 inked += 1;
             }
             x += w;

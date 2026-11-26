@@ -153,7 +153,7 @@ pub fn ink(rgba: &[u8], w: u32, h: u32) -> Option<Rect> {
     for (y, row) in rgba.chunks_exact(w * 4).take(h).enumerate() {
         let mut first = None;
         let mut last = 0;
-        for (x, p) in row.chunks_exact(4).enumerate() {
+        for (x, p) in row.as_chunks::<4>().0.iter().enumerate() {
             if on_white(p) != (255, 255, 255) {
                 first.get_or_insert(x);
                 last = x;
@@ -192,7 +192,7 @@ pub fn dib(rgba: &[u8], w: u32, part: Rect, rotate: bool) -> Option<(u32, u32, V
     let mut out = vec![255u8; stride.checked_mul(oh)?];
     for oy in 0..oh {
         let row = &mut out[oy * stride..oy * stride + ow * 3];
-        for (ox, dst) in row.chunks_exact_mut(3).enumerate() {
+        for (ox, dst) in row.as_chunks_mut::<3>().0.iter_mut().enumerate() {
             // Turned clockwise: the output's (ox, oy) is the source's (oy, ph - 1 - ox).
             let (r, g, b) = if rotate { pixel(oy, ph - 1 - ox) } else { pixel(ox, oy) };
             dst.copy_from_slice(&[b, g, r]);
